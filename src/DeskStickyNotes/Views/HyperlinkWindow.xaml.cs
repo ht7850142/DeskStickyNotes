@@ -15,7 +15,11 @@ public partial class HyperlinkWindow : Window
 
         Loaded += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(UrlTextBox.Text))
+            if (string.IsNullOrWhiteSpace(DisplayTextBox.Text))
+            {
+                DisplayTextBox.Focus();
+            }
+            else if (string.IsNullOrWhiteSpace(UrlTextBox.Text))
             {
                 UrlTextBox.Focus();
             }
@@ -33,6 +37,12 @@ public partial class HyperlinkWindow : Window
 
     private void Insert_Click(object sender, RoutedEventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(LinkText))
+        {
+            DisplayTextBox.Focus();
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(LinkUrl))
         {
             UrlTextBox.Focus();
@@ -68,6 +78,7 @@ public partial class HyperlinkWindow : Window
 
     private void UpdateInsertButton()
     {
-        InsertButton.IsEnabled = !string.IsNullOrWhiteSpace(UrlTextBox.Text);
+        InsertButton.IsEnabled = !string.IsNullOrWhiteSpace(DisplayTextBox.Text)
+            && !string.IsNullOrWhiteSpace(UrlTextBox.Text);
     }
 }

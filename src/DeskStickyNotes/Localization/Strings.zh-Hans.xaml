@@ -34,6 +34,7 @@
     <sys:String x:Key="StyleHeading2">二级</sys:String>
     <sys:String x:Key="StyleHeading3">三级</sys:String>
     <sys:String x:Key="HyperlinkDialogTitle">插入链接</sys:String>
+    <sys:String x:Key="HyperlinkDialogHint">分别填写便签中显示的文字和点击后打开的链接地址。</sys:String>
     <sys:String x:Key="HyperlinkDialogText">显示文字</sys:String>
     <sys:String x:Key="HyperlinkDialogUrl">链接地址</sys:String>
     <sys:String x:Key="HyperlinkDialogOk">插入</sys:String>

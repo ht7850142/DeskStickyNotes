@@ -48,7 +48,7 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 - Multiple independent sticky-note windows
 - No taskbar button for normal note windows
 - System tray menu: New Note, Show All Notes, Hide All Notes, Settings, Exit
-- Double-click tray icon to create a note
+- Double-click tray icon to show existing notes
 - Auto-save note content, position, size, color, visibility, and topmost state
 - Rich text editing: bold, italic, underline, strikethrough, bullets, numbering, todo items, headings, alignment, and hyperlinks
 - Restore notes on startup
@@ -75,9 +75,15 @@ The installer lets users choose a custom install path and re-install over an exi
 
 ## Screenshots
 
-Screenshots are recommended before the first public release. A good README should show the real note window, tray workflow, settings window, rich text editing, and collapsed icon mode.
+### Note Window
 
-Screenshot checklist: [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md)
+![DeskStickyNotes sticky note window with rich text and todo items](docs/images/note-window.png)
+
+### Collapsed Icon Mode
+
+![DeskStickyNotes collapsed draggable note icon](docs/images/collapsed-icon.png)
+
+More screenshot notes: [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md)
 
 ## Requirements
 
@@ -137,10 +143,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Current package names:
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.2.5-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.2.5-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.2.5-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.2.5-runtime.exe
+artifacts\installer\DeskStickyNotes-portable-0.2.7-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.2.7-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.2.7-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.2.7-runtime.exe
 ```
 
 To build the runtime installer, place the Microsoft runtime installer at the repository root:

@@ -9,6 +9,16 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 - Add screenshots to the README.
 - Add automated UI smoke tests if the project grows beyond manual verification.
 
+## [0.2.7] - 2026-07-08
+
+- Fixed hyperlink dialog spacing so the URL field is not clipped by the action buttons.
+- Added a clear disabled state for primary buttons.
+
+## [0.2.6] - 2026-07-08
+
+- Made hyperlink insertion clearer by requiring both display text and link address.
+- Enlarged the hyperlink dialog and added explanatory copy in English and Simplified Chinese.
+
 ## [0.2.5] - 2026-07-08
 
 - Changed tray icon double-click to show existing notes instead of creating a new note.

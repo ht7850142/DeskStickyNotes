@@ -27,9 +27,19 @@ public partial class NoteWindow : Window
     private const int WmSize = 0x0005;
     private const int WmShowWindow = 0x0018;
     private const int WmWindowPosChanging = 0x0046;
+    private const int WmNcHitTest = 0x0084;
     private const int ScMinimize = 0xF020;
     private const int SizeMinimized = 1;
+    private const int HtLeft = 10;
+    private const int HtRight = 11;
+    private const int HtTop = 12;
+    private const int HtTopLeft = 13;
+    private const int HtTopRight = 14;
+    private const int HtBottom = 15;
+    private const int HtBottomLeft = 16;
+    private const int HtBottomRight = 17;
     private const int SwShownoactivate = 4;
+    private const int ResizeBorderPixels = 10;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoZOrder = 0x0004;
@@ -900,6 +910,16 @@ public partial class NoteWindow : Window
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == WmNcHitTest && CanResizeFromWindowEdges())
+        {
+            var hitTest = HitTestResizeBorder(hwnd, lParam);
+            if (hitTest != IntPtr.Zero)
+            {
+                handled = true;
+                return hitTest;
+            }
+        }
+
         if (!ShouldBlockMinimize())
         {
             return IntPtr.Zero;
@@ -942,6 +962,77 @@ public partial class NoteWindow : Window
         }
 
         return IntPtr.Zero;
+    }
+
+    private bool CanResizeFromWindowEdges()
+    {
+        return !_isIconCollapsed
+            && WindowState == WindowState.Normal
+            && ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
+    }
+
+    private static IntPtr HitTestResizeBorder(IntPtr hwnd, IntPtr lParam)
+    {
+        if (!NativeMethods.GetWindowRect(hwnd, out var rect))
+        {
+            return IntPtr.Zero;
+        }
+
+        var point = GetScreenPoint(lParam);
+        var onLeft = point.X >= rect.Left && point.X < rect.Left + ResizeBorderPixels;
+        var onRight = point.X <= rect.Right && point.X > rect.Right - ResizeBorderPixels;
+        var onTop = point.Y >= rect.Top && point.Y < rect.Top + ResizeBorderPixels;
+        var onBottom = point.Y <= rect.Bottom && point.Y > rect.Bottom - ResizeBorderPixels;
+
+        if (onTop && onLeft)
+        {
+            return new IntPtr(HtTopLeft);
+        }
+
+        if (onTop && onRight)
+        {
+            return new IntPtr(HtTopRight);
+        }
+
+        if (onBottom && onLeft)
+        {
+            return new IntPtr(HtBottomLeft);
+        }
+
+        if (onBottom && onRight)
+        {
+            return new IntPtr(HtBottomRight);
+        }
+
+        if (onLeft)
+        {
+            return new IntPtr(HtLeft);
+        }
+
+        if (onRight)
+        {
+            return new IntPtr(HtRight);
+        }
+
+        if (onTop)
+        {
+            return new IntPtr(HtTop);
+        }
+
+        if (onBottom)
+        {
+            return new IntPtr(HtBottom);
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private static NativePoint GetScreenPoint(IntPtr lParam)
+    {
+        var value = lParam.ToInt64();
+        return new NativePoint(
+            unchecked((short)(value & 0xFFFF)),
+            unchecked((short)((value >> 16) & 0xFFFF)));
     }
 
     private bool ShouldBlockMinimize()
@@ -1099,6 +1190,29 @@ public partial class NoteWindow : Window
         public uint Flags;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly struct NativePoint
+    {
+        public NativePoint(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public int X { get; }
+
+        public int Y { get; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
     private static class NativeMethods
     {
         private const int DwmwaCloaked = 14;
@@ -1161,6 +1275,9 @@ public partial class NoteWindow : Window
 
         [DllImport("user32.dll")]
         internal static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        internal static extern bool GetWindowRect(IntPtr hWnd, out NativeRect lpRect);
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);

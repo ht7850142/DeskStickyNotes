@@ -1,52 +1,51 @@
-# Screenshot Guide
+# Screenshots
 
-Good screenshots help users understand DeskStickyNotes faster than feature lists. They also make GitHub, release pages, and social posts look more trustworthy.
+This folder documents the screenshots used by the README and release pages.
 
-## Recommended Screenshots
+## Current Images
 
-Capture these before the first public release:
+The current public README uses:
 
-1. `docs/images/note-window.png`
-   - One normal note on the desktop.
-   - Show the title bar, toolbar, note color, and rich text content.
+- `docs/images/note-window.png`
+  - Main note window with rich text, todo items, and the inverted always-on-top state.
 
-2. `docs/images/always-on-top.png`
-   - Show a note pinned above another app window.
-   - Make the pin icon visible in the title bar.
+- `docs/images/collapsed-icon.png`
+  - Collapsed draggable icon mode.
 
-3. `docs/images/collapsed-icon.png`
-   - Show the note collapsed into a small draggable icon while staying available.
+Also available as a reference image:
 
-4. `docs/images/rich-text.png`
-   - Show bold text, a todo item, a heading, a bullet list, and a hyperlink.
+- `docs/images/settings-0.2.5-reference.png`
+  - Settings window captured before the 0.2.6 bugfix release. Recapture this as `docs/images/settings.png` before using it in the README.
 
-5. `docs/images/tray-menu.png`
-   - Show the system tray menu with New Note, Show All Notes, Hide All Notes, Settings, and Exit.
+## Recommended Additional Screenshots
 
-6. `docs/images/settings.png`
-   - Show language, default color, font size, startup, topmost, Win+D, and version information.
+Add these when convenient:
 
-7. `docs/images/multiple-notes.png`
-   - Show two or three notes with different colors on the desktop.
+- `docs/images/settings.png`
+  - Settings window from the current release version.
+- `docs/images/tray-menu.png`
+  - System tray menu with New Note, Show All Notes, Hide All Notes, Settings, and Exit.
+- `docs/images/hyperlink-dialog.png`
+  - Hyperlink dialog with separate text and URL fields.
+- `docs/images/multiple-notes.png`
+  - Two or three notes with different colors on the desktop.
 
 ## Capture Tips
 
 - Use Windows 11 with 100% or 125% scaling.
 - Use a clean desktop background.
 - Avoid private note content, personal file names, browser tabs, and account information.
-- Keep text realistic: todo lists, quick ideas, meeting notes, or short links.
+- Keep text realistic but generic: todo lists, quick ideas, meeting notes, or short links.
 - Prefer PNG for README images.
 - Keep screenshots under about 1 MB each when possible.
 
-## README Order
+## README Placement
 
-After the screenshots exist, add them to the README in this order:
+The README should prioritize:
 
 1. Main note window
-2. Always-on-top note
-3. Collapsed icon mode
-4. Rich text editing
-5. Tray menu and settings
+2. Collapsed icon mode
+3. Settings or tray menu once recaptured for the current version
 
 Use descriptive alt text, for example:
 

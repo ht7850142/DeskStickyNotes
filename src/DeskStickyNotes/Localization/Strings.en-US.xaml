@@ -34,6 +34,7 @@
     <sys:String x:Key="StyleHeading2">H2</sys:String>
     <sys:String x:Key="StyleHeading3">H3</sys:String>
     <sys:String x:Key="HyperlinkDialogTitle">Insert Link</sys:String>
+    <sys:String x:Key="HyperlinkDialogHint">Enter the text shown in the note and the address opened when clicked.</sys:String>
     <sys:String x:Key="HyperlinkDialogText">Text</sys:String>
     <sys:String x:Key="HyperlinkDialogUrl">URL</sys:String>
     <sys:String x:Key="HyperlinkDialogOk">Insert</sys:String>
