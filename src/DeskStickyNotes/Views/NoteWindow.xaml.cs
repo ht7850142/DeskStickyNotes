@@ -1,0 +1,1185 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Markup;
+using System.Windows.Media;
+using System.Windows.Navigation;
+using System.Windows.Threading;
+using DeskStickyNotes.Models;
+using DeskStickyNotes.ViewModels;
+
+namespace DeskStickyNotes.Views;
+
+public partial class NoteWindow : Window
+{
+    private const int GwlExStyle = -20;
+    private const long WsExToolWindow = 0x00000080L;
+    private const long WsExAppWindow = 0x00040000L;
+    private const int WmSysCommand = 0x0112;
+    private const int WmSize = 0x0005;
+    private const int WmShowWindow = 0x0018;
+    private const int WmWindowPosChanging = 0x0046;
+    private const int ScMinimize = 0xF020;
+    private const int SizeMinimized = 1;
+    private const int SwShownoactivate = 4;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+    private const uint SwpFrameChanged = 0x0020;
+    private const uint SwpShowWindow = 0x0040;
+    private const uint SwpHideWindow = 0x0080;
+    private const double CollapsedIconSize = 64;
+    private static readonly IntPtr HwndTop = IntPtr.Zero;
+    private static readonly IntPtr HwndTopmost = new(-1);
+
+    private HwndSource? _hwndSource;
+    private Popup? _openFlyout;
+    private readonly DispatcherTimer _showDesktopRecoveryTimer;
+    private bool _allowClose;
+    private bool _collapsedIconWasDragged;
+    private bool _isIconCollapsed;
+    private bool _isLoadingEditor;
+    private bool _isCollapsedIconMouseDown;
+    private bool _isTitleMouseDown;
+    private bool _isTaskbarMinimized;
+    private System.Windows.Point _collapsedIconMouseDownPoint;
+    private double _expandedMinHeight;
+    private double _expandedMinWidth;
+    private System.Windows.Point _titleMouseDownPoint;
+    private Rect _expandedBounds;
+    private ResizeMode _expandedResizeMode;
+    private int _showDesktopRecoveryAttempts;
+
+    public NoteWindow(NoteViewModel viewModel)
+    {
+        InitializeComponent();
+        DataContext = viewModel;
+        Width = viewModel.Width;
+        Height = viewModel.Height;
+        Editor.AddHandler(Hyperlink.RequestNavigateEvent, new RequestNavigateEventHandler(Hyperlink_RequestNavigate));
+        LoadEditorContent();
+
+        _showDesktopRecoveryTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
+        _showDesktopRecoveryTimer.Tick += ShowDesktopRecoveryTimer_Tick;
+
+        SourceInitialized += OnSourceInitialized;
+        Loaded += (_, _) => _showDesktopRecoveryTimer.Start();
+        LocationChanged += (_, _) => UpdateGeometry();
+        SizeChanged += (_, _) => UpdateGeometry();
+        StateChanged += OnStateChanged;
+    }
+
+    private NoteViewModel ViewModel => (NoteViewModel)DataContext;
+
+    public void CloseForApplication()
+    {
+        _allowClose = true;
+        Close();
+    }
+
+    public void MinimizeToTaskbar()
+    {
+        SaveEditorContent();
+        _isTaskbarMinimized = true;
+        ViewModel.Visible = true;
+        ShowInTaskbar = true;
+        ApplyTaskbarVisibility(showInTaskbar: true);
+        WindowState = WindowState.Minimized;
+    }
+
+    public void HideFromDesktop()
+    {
+        _isTaskbarMinimized = false;
+        WindowState = WindowState.Normal;
+        ShowInTaskbar = false;
+        ApplyTaskbarVisibility(showInTaskbar: false);
+        Hide();
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!_allowClose && !App.Current.IsExitRequested)
+        {
+            e.Cancel = true;
+            ViewModel.HideCommand.Execute(null);
+            return;
+        }
+
+        base.OnClosing(e);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        CloseOpenFlyout();
+        _showDesktopRecoveryTimer.Stop();
+        _hwndSource?.RemoveHook(WndProc);
+        base.OnClosed(e);
+    }
+
+    private void DragBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left && !IsInsideButton(e.OriginalSource as DependencyObject))
+        {
+            _isTitleMouseDown = true;
+            _titleMouseDownPoint = e.GetPosition(this);
+            if (sender is UIElement element)
+            {
+                element.CaptureMouse();
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private void DragBar_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_isTitleMouseDown || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(this);
+        var movedFarEnough =
+            Math.Abs(position.X - _titleMouseDownPoint.X) >= SystemParameters.MinimumHorizontalDragDistance
+            || Math.Abs(position.Y - _titleMouseDownPoint.Y) >= SystemParameters.MinimumVerticalDragDistance;
+
+        if (!movedFarEnough)
+        {
+            return;
+        }
+
+        _isTitleMouseDown = false;
+        if (sender is UIElement element)
+        {
+            element.ReleaseMouseCapture();
+        }
+
+        try
+        {
+            DragMove();
+        }
+        catch
+        {
+            // DragMove can throw if mouse capture has already changed.
+        }
+
+        e.Handled = true;
+    }
+
+    private void DragBar_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isTitleMouseDown)
+        {
+            return;
+        }
+
+        _isTitleMouseDown = false;
+        if (sender is UIElement element)
+        {
+            element.ReleaseMouseCapture();
+        }
+
+        CollapseToIcon();
+        e.Handled = true;
+    }
+
+    private void CollapseButton_Click(object sender, RoutedEventArgs e)
+    {
+        CollapseToIcon();
+        e.Handled = true;
+    }
+
+    private void CollapsedIcon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isCollapsedIconMouseDown)
+        {
+            return;
+        }
+
+        _isCollapsedIconMouseDown = false;
+        if (sender is UIElement element)
+        {
+            element.ReleaseMouseCapture();
+        }
+
+        if (_collapsedIconWasDragged)
+        {
+            SaveCollapsedIconPosition();
+        }
+        else
+        {
+            RestoreFromIcon();
+        }
+
+        e.Handled = true;
+    }
+
+    private void CollapsedIcon_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        _isCollapsedIconMouseDown = true;
+        _collapsedIconWasDragged = false;
+        _collapsedIconMouseDownPoint = e.GetPosition(this);
+        if (sender is UIElement element)
+        {
+            element.CaptureMouse();
+        }
+
+        e.Handled = true;
+    }
+
+    private void CollapsedIcon_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_isCollapsedIconMouseDown || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var position = e.GetPosition(this);
+        var movedFarEnough =
+            Math.Abs(position.X - _collapsedIconMouseDownPoint.X) >= SystemParameters.MinimumHorizontalDragDistance
+            || Math.Abs(position.Y - _collapsedIconMouseDownPoint.Y) >= SystemParameters.MinimumVerticalDragDistance;
+
+        if (!movedFarEnough)
+        {
+            return;
+        }
+
+        _collapsedIconWasDragged = true;
+        _isCollapsedIconMouseDown = false;
+        if (sender is UIElement element)
+        {
+            element.ReleaseMouseCapture();
+        }
+
+        try
+        {
+            DragMove();
+            SaveCollapsedIconPosition();
+        }
+        catch
+        {
+            // DragMove can throw if mouse capture has already changed.
+        }
+
+        e.Handled = true;
+    }
+
+    private void CollapseToIcon()
+    {
+        if (_isIconCollapsed)
+        {
+            return;
+        }
+
+        SaveEditorContent();
+
+        _expandedBounds = new Rect(
+            Left,
+            Top,
+            ActualWidth > 0 ? ActualWidth : Width,
+            ActualHeight > 0 ? ActualHeight : Height);
+        _expandedMinWidth = MinWidth;
+        _expandedMinHeight = MinHeight;
+        _expandedResizeMode = ResizeMode;
+
+        if (!ViewModel.Topmost)
+        {
+            ViewModel.Topmost = true;
+        }
+
+        _isIconCollapsed = true;
+        SetCollapsedChrome(collapsed: true);
+        ExpandedContent.Visibility = Visibility.Collapsed;
+        CollapsedIconContent.Visibility = Visibility.Visible;
+        ResizeMode = ResizeMode.NoResize;
+        MinWidth = CollapsedIconSize;
+        MinHeight = CollapsedIconSize;
+        Width = CollapsedIconSize;
+        Height = CollapsedIconSize;
+        ShowInTaskbar = false;
+        ApplyTaskbarVisibility(showInTaskbar: false);
+    }
+
+    private void RestoreFromIcon()
+    {
+        if (!_isIconCollapsed)
+        {
+            return;
+        }
+
+        _isIconCollapsed = false;
+        SetCollapsedChrome(collapsed: false);
+        MinWidth = _expandedMinWidth > 0 ? _expandedMinWidth : 390;
+        MinHeight = _expandedMinHeight > 0 ? _expandedMinHeight : 210;
+        ResizeMode = _expandedResizeMode;
+        CollapsedIconContent.Visibility = Visibility.Collapsed;
+        ExpandedContent.Visibility = Visibility.Visible;
+
+        if (double.IsFinite(_expandedBounds.Left))
+        {
+            Left = _expandedBounds.Left;
+        }
+
+        if (double.IsFinite(_expandedBounds.Top))
+        {
+            Top = _expandedBounds.Top;
+        }
+
+        Width = _expandedBounds.Width >= MinWidth ? _expandedBounds.Width : MinWidth;
+        Height = _expandedBounds.Height >= MinHeight ? _expandedBounds.Height : MinHeight;
+        Activate();
+    }
+
+    private void SaveCollapsedIconPosition()
+    {
+        if (!double.IsFinite(Left) || !double.IsFinite(Top))
+        {
+            return;
+        }
+
+        _expandedBounds = new Rect(Left, Top, _expandedBounds.Width, _expandedBounds.Height);
+        ViewModel.X = Left;
+        ViewModel.Y = Top;
+    }
+
+    private void SetCollapsedChrome(bool collapsed)
+    {
+        if (collapsed)
+        {
+            WindowChrome.Background = System.Windows.Media.Brushes.Transparent;
+            WindowChrome.Effect = null;
+            return;
+        }
+
+        System.Windows.Data.BindingOperations.SetBinding(
+            WindowChrome,
+            Border.BackgroundProperty,
+            new System.Windows.Data.Binding(nameof(NoteViewModel.BackgroundHex)));
+        WindowChrome.Effect = WindowChromeShadow;
+    }
+
+    private void ColorButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button)
+        {
+            return;
+        }
+
+        var items = new List<UIElement>();
+        foreach (var color in NotePalette.Names)
+        {
+            items.Add(CreateColorFlyoutButton(color));
+        }
+
+        ShowFlyout(button, items, 118);
+    }
+
+    private void EditorToolButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: string action })
+        {
+            return;
+        }
+
+        Editor.Focus();
+
+        switch (action)
+        {
+            case "Bold":
+                EditingCommands.ToggleBold.Execute(null, Editor);
+                break;
+            case "Italic":
+                EditingCommands.ToggleItalic.Execute(null, Editor);
+                break;
+            case "Underline":
+                EditingCommands.ToggleUnderline.Execute(null, Editor);
+                break;
+            case "Strike":
+                ToggleStrikethrough();
+                break;
+            case "Bullet":
+                EditingCommands.ToggleBullets.Execute(null, Editor);
+                break;
+            case "Number":
+                EditingCommands.ToggleNumbering.Execute(null, Editor);
+                break;
+            case "Todo":
+                ToggleTodoLine();
+                break;
+            case "AlignLeft":
+                EditingCommands.AlignLeft.Execute(null, Editor);
+                break;
+            case "AlignCenter":
+                EditingCommands.AlignCenter.Execute(null, Editor);
+                break;
+            case "AlignRight":
+                EditingCommands.AlignRight.Execute(null, Editor);
+                break;
+        }
+
+        SaveEditorContent();
+    }
+
+    private void HeadingButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button)
+        {
+            return;
+        }
+
+        ShowFlyout(button, new[]
+        {
+            CreateHeadingFlyoutButton("StyleBody", "Body", 13, FontWeights.Normal),
+            CreateHeadingFlyoutButton("StyleTitle", "Title", 15, FontWeights.Bold),
+            CreateHeadingFlyoutButton("StyleHeading1", "Heading1", 14, FontWeights.Bold),
+            CreateHeadingFlyoutButton("StyleHeading2", "Heading2", 13, FontWeights.SemiBold),
+            CreateHeadingFlyoutButton("StyleHeading3", "Heading3", 13, FontWeights.Normal)
+        }, 96);
+    }
+
+    private void HyperlinkButton_Click(object sender, RoutedEventArgs e)
+    {
+        Editor.Focus();
+
+        var selectedText = new TextRange(Editor.Selection.Start, Editor.Selection.End)
+            .Text
+            .TrimEnd('\r', '\n');
+        var dialog = new HyperlinkWindow(selectedText)
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        var normalizedUrl = NormalizeUrl(dialog.LinkUrl);
+        if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        var displayText = string.IsNullOrWhiteSpace(dialog.LinkText)
+            ? normalizedUrl
+            : dialog.LinkText;
+
+        InsertHyperlink(displayText, uri);
+        SaveEditorContent();
+    }
+
+    private void ShowFlyout(System.Windows.Controls.Button owner, IEnumerable<UIElement> items, double minWidth)
+    {
+        CloseOpenFlyout();
+
+        var panel = new StackPanel
+        {
+            MinWidth = minWidth
+        };
+
+        foreach (var item in items)
+        {
+            panel.Children.Add(item);
+        }
+
+        var root = new Border
+        {
+            Style = (Style)FindResource("FlyoutMenuBorderStyle"),
+            Child = panel
+        };
+
+        var popup = new Popup
+        {
+            AllowsTransparency = true,
+            Child = root,
+            Placement = PlacementMode.Bottom,
+            PlacementTarget = owner,
+            PopupAnimation = PopupAnimation.Fade,
+            StaysOpen = false,
+            VerticalOffset = 4
+        };
+
+        popup.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_openFlyout, popup))
+            {
+                _openFlyout = null;
+            }
+        };
+
+        _openFlyout = popup;
+        popup.IsOpen = true;
+    }
+
+    private void CloseOpenFlyout()
+    {
+        var popup = _openFlyout;
+        _openFlyout = null;
+        if (popup is not null)
+        {
+            popup.IsOpen = false;
+        }
+    }
+
+    private System.Windows.Controls.Button CreateFlyoutButton(object content)
+    {
+        return new System.Windows.Controls.Button
+        {
+            Style = (Style)FindResource("FlyoutMenuButtonStyle"),
+            Content = content
+        };
+    }
+
+    private System.Windows.Controls.Button CreateColorFlyoutButton(string color)
+    {
+        var palette = NotePalette.Get(color);
+        var isSelected = string.Equals(ViewModel.Color, color, StringComparison.OrdinalIgnoreCase);
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var swatch = new Border
+        {
+            Width = 13,
+            Height = 13,
+            Margin = new Thickness(0, 0, 8, 0),
+            CornerRadius = new CornerRadius(6.5),
+            Background = ToBrush(palette.Swatch),
+            BorderBrush = ToBrush(palette.Border),
+            BorderThickness = new Thickness(1)
+        };
+        Grid.SetColumn(swatch, 0);
+        grid.Children.Add(swatch);
+
+        var label = new TextBlock
+        {
+            Text = Services.LocalizationService.GetColorName(color),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(label);
+
+        var check = new TextBlock
+        {
+            Text = isSelected ? "✓" : "",
+            Width = 16,
+            Foreground = ToBrush("#2563EB"),
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center
+        };
+        Grid.SetColumn(check, 2);
+        grid.Children.Add(check);
+
+        var button = CreateFlyoutButton(grid);
+        button.Click += (_, _) =>
+        {
+            CloseOpenFlyout();
+            ViewModel.SetColorCommand.Execute(color);
+        };
+
+        return button;
+    }
+
+    private System.Windows.Controls.Button CreateHeadingFlyoutButton(string resourceKey, string style, double fontSize, FontWeight fontWeight)
+    {
+        var label = new TextBlock
+        {
+            Text = Services.LocalizationService.Get(resourceKey),
+            FontSize = fontSize,
+            FontWeight = fontWeight,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var button = CreateFlyoutButton(label);
+        button.Click += (_, _) =>
+        {
+            CloseOpenFlyout();
+            Editor.Focus();
+            ApplyHeadingStyle(style);
+            SaveEditorContent();
+        };
+
+        return button;
+    }
+
+    private void Editor_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_isLoadingEditor)
+        {
+            SaveEditorContent();
+        }
+    }
+
+    private void LoadEditorContent()
+    {
+        _isLoadingEditor = true;
+        try
+        {
+            Editor.Document.Blocks.Clear();
+
+            if (!string.IsNullOrWhiteSpace(ViewModel.RichContent))
+            {
+                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(ViewModel.RichContent));
+                new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd)
+                    .Load(stream, System.Windows.DataFormats.Xaml);
+                return;
+            }
+
+            Editor.Document.Blocks.Add(new Paragraph(new Run(ViewModel.TextContent)));
+        }
+        catch
+        {
+            Editor.Document.Blocks.Clear();
+            Editor.Document.Blocks.Add(new Paragraph(new Run(ViewModel.TextContent)));
+        }
+        finally
+        {
+            _isLoadingEditor = false;
+        }
+    }
+
+    private void SaveEditorContent()
+    {
+        var range = new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd);
+        using var stream = new MemoryStream();
+        range.Save(stream, System.Windows.DataFormats.Xaml);
+
+        var plainText = range.Text.TrimEnd('\r', '\n');
+        var richContent = Encoding.UTF8.GetString(stream.ToArray());
+        ViewModel.UpdateContent(plainText, richContent);
+    }
+
+    private void ApplyHeadingStyle(string style)
+    {
+        var paragraph = Editor.CaretPosition.Paragraph;
+        if (paragraph is null)
+        {
+            paragraph = new Paragraph();
+            Editor.Document.Blocks.Add(paragraph);
+            Editor.CaretPosition = paragraph.ContentStart;
+        }
+
+        switch (style)
+        {
+            case "Title":
+                ApplyParagraphStyle(paragraph, ViewModel.FontSize + 10, FontWeights.Bold, 0, 0, 0, 12);
+                break;
+            case "Heading1":
+                ApplyParagraphStyle(paragraph, ViewModel.FontSize + 7, FontWeights.Bold, 0, 0, 0, 10);
+                break;
+            case "Heading2":
+                ApplyParagraphStyle(paragraph, ViewModel.FontSize + 5, FontWeights.SemiBold, 0, 0, 0, 9);
+                break;
+            case "Heading3":
+                ApplyParagraphStyle(paragraph, ViewModel.FontSize + 3, FontWeights.SemiBold, 0, 0, 0, 8);
+                break;
+            default:
+                paragraph.ClearValue(TextElement.FontSizeProperty);
+                paragraph.ClearValue(TextElement.FontWeightProperty);
+                paragraph.ClearValue(FrameworkContentElement.StyleProperty);
+                paragraph.Margin = new Thickness(0, 0, 0, 8);
+                paragraph.LineHeight = 22;
+                break;
+        }
+    }
+
+    private static void ApplyParagraphStyle(
+        Paragraph paragraph,
+        double fontSize,
+        FontWeight fontWeight,
+        double left,
+        double top,
+        double right,
+        double bottom)
+    {
+        paragraph.FontSize = Math.Round(fontSize);
+        paragraph.FontWeight = fontWeight;
+        paragraph.Margin = new Thickness(left, top, right, bottom);
+        paragraph.LineHeight = Math.Round(fontSize * 1.35);
+    }
+
+    private void InsertHyperlink(string displayText, Uri uri)
+    {
+        if (!Editor.Selection.IsEmpty)
+        {
+            Editor.Selection.Text = string.Empty;
+        }
+
+        var insertionPosition = Editor.CaretPosition.GetInsertionPosition(LogicalDirection.Forward);
+        if (insertionPosition?.Paragraph is null)
+        {
+            var paragraph = new Paragraph();
+            Editor.Document.Blocks.Add(paragraph);
+            insertionPosition = paragraph.ContentStart;
+        }
+
+        var hyperlink = new Hyperlink(new Run(displayText), insertionPosition)
+        {
+            NavigateUri = uri,
+            Foreground = System.Windows.Media.Brushes.Blue,
+            TextDecorations = TextDecorations.Underline
+        };
+
+        var trailingSpace = new Run(" ");
+        if (hyperlink.Parent is Paragraph paragraphParent)
+        {
+            paragraphParent.Inlines.InsertAfter(hyperlink, trailingSpace);
+            Editor.CaretPosition = trailingSpace.ContentEnd;
+        }
+        else if (hyperlink.Parent is Span spanParent)
+        {
+            spanParent.Inlines.InsertAfter(hyperlink, trailingSpace);
+            Editor.CaretPosition = trailingSpace.ContentEnd;
+        }
+    }
+
+    private static string NormalizeUrl(string url)
+    {
+        var trimmedUrl = url.Trim();
+        if (string.IsNullOrWhiteSpace(trimmedUrl)
+            || trimmedUrl.Contains("://", StringComparison.Ordinal)
+            || trimmedUrl.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmedUrl;
+        }
+
+        return $"https://{trimmedUrl}";
+    }
+
+    private static void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
+            {
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Ignore shell failures; the note content itself should stay intact.
+        }
+
+        e.Handled = true;
+    }
+
+    private void ToggleStrikethrough()
+    {
+        var selection = Editor.Selection;
+        var value = selection.GetPropertyValue(Inline.TextDecorationsProperty);
+        var hasStrike = value is TextDecorationCollection decorations
+            && decorations.Any(decoration => decoration.Location == TextDecorationLocation.Strikethrough);
+
+        selection.ApplyPropertyValue(
+            Inline.TextDecorationsProperty,
+            hasStrike ? null : TextDecorations.Strikethrough);
+    }
+
+    private void ToggleTodoLine()
+    {
+        var paragraph = Editor.CaretPosition.Paragraph;
+        if (paragraph is null)
+        {
+            paragraph = new Paragraph();
+            Editor.Document.Blocks.Add(paragraph);
+            Editor.CaretPosition = paragraph.ContentStart;
+        }
+
+        var textRange = new TextRange(paragraph.ContentStart, paragraph.ContentEnd);
+        var text = textRange.Text;
+
+        if (text.StartsWith("☐ ", StringComparison.Ordinal))
+        {
+            ReplaceParagraphPrefix(paragraph, "☐ ", "☑ ");
+        }
+        else if (text.StartsWith("☑ ", StringComparison.Ordinal))
+        {
+            ReplaceParagraphPrefix(paragraph, "☑ ", "☐ ");
+        }
+        else
+        {
+            if (paragraph.Inlines.FirstInline is null)
+            {
+                paragraph.Inlines.Add(new Run("☐ "));
+            }
+            else
+            {
+                paragraph.Inlines.InsertBefore(paragraph.Inlines.FirstInline, new Run("☐ "));
+            }
+        }
+    }
+
+    private static void ReplaceParagraphPrefix(Paragraph paragraph, string oldPrefix, string newPrefix)
+    {
+        var text = new TextRange(paragraph.ContentStart, paragraph.ContentEnd).Text;
+        paragraph.Inlines.Clear();
+        paragraph.Inlines.Add(new Run(newPrefix + text[oldPrefix.Length..].TrimEnd('\r', '\n')));
+    }
+
+    private static System.Windows.Media.Brush ToBrush(string hex)
+    {
+        return (System.Windows.Media.Brush)(new BrushConverter().ConvertFromString(hex) ?? System.Windows.Media.Brushes.Transparent);
+    }
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        ApplyTaskbarVisibility(showInTaskbar: false);
+        _hwndSource = HwndSource.FromHwnd(handle);
+        _hwndSource?.AddHook(WndProc);
+    }
+
+    private void ApplyTaskbarVisibility(bool showInTaskbar)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var extendedStyle = NativeMethods.GetWindowLongPtr(handle, GwlExStyle).ToInt64();
+
+        if (showInTaskbar)
+        {
+            extendedStyle &= ~WsExToolWindow;
+            extendedStyle |= WsExAppWindow;
+        }
+        else
+        {
+            extendedStyle |= WsExToolWindow;
+            extendedStyle &= ~WsExAppWindow;
+        }
+
+        NativeMethods.SetWindowLongPtr(handle, GwlExStyle, new IntPtr(extendedStyle));
+        NativeMethods.SetWindowPos(
+            handle,
+            IntPtr.Zero,
+            0,
+            0,
+            0,
+            0,
+            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpFrameChanged);
+    }
+
+    private void OnStateChanged(object? sender, EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized && ShouldBlockMinimize())
+        {
+            QueueShowDesktopRecovery();
+            return;
+        }
+
+        if (_isTaskbarMinimized && WindowState != WindowState.Minimized)
+        {
+            _isTaskbarMinimized = false;
+            ShowInTaskbar = false;
+            ApplyTaskbarVisibility(showInTaskbar: false);
+        }
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (!ShouldBlockMinimize())
+        {
+            return IntPtr.Zero;
+        }
+
+        if (msg == WmSysCommand && (wParam.ToInt64() & 0xFFF0) == ScMinimize)
+        {
+            handled = true;
+            QueueShowDesktopRecovery();
+            return IntPtr.Zero;
+        }
+
+        if (msg == WmSize && wParam.ToInt32() == SizeMinimized)
+        {
+            handled = true;
+            QueueShowDesktopRecovery();
+            return IntPtr.Zero;
+        }
+
+        if (msg == WmShowWindow && wParam == IntPtr.Zero)
+        {
+            handled = true;
+            QueueShowDesktopRecovery();
+            return IntPtr.Zero;
+        }
+
+        if (msg == WmWindowPosChanging && lParam != IntPtr.Zero)
+        {
+            var windowPos = Marshal.PtrToStructure<WindowPos>(lParam);
+            if ((windowPos.Flags & SwpHideWindow) != 0)
+            {
+                windowPos.Flags &= ~SwpHideWindow;
+                windowPos.Flags |= SwpShowWindow | SwpNoActivate;
+                Marshal.StructureToPtr(windowPos, lParam, fDeleteOld: false);
+
+                handled = true;
+                QueueShowDesktopRecovery();
+                return IntPtr.Zero;
+            }
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private bool ShouldBlockMinimize()
+    {
+        return ViewModel.Visible
+            && !_allowClose
+            && !_isTaskbarMinimized
+            && App.Current.KeepNotesVisibleAfterShowDesktop;
+    }
+
+    private void QueueShowDesktopRecovery()
+    {
+        if (!ShouldBlockMinimize())
+        {
+            return;
+        }
+
+        _showDesktopRecoveryAttempts = Math.Max(_showDesktopRecoveryAttempts, 30);
+        Dispatcher.BeginInvoke(RestoreAfterShowDesktop);
+    }
+
+    private void ShowDesktopRecoveryTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!ShouldBlockMinimize())
+        {
+            _showDesktopRecoveryAttempts = 0;
+            return;
+        }
+
+        var handle = new WindowInteropHelper(this).Handle;
+        if (_showDesktopRecoveryAttempts > 0
+            || IsNativeWindowSuppressed(handle)
+            || IsShellDesktopForeground())
+        {
+            RestoreAfterShowDesktop();
+        }
+    }
+
+    private void RestoreAfterShowDesktop()
+    {
+        if (!ShouldBlockMinimize())
+        {
+            _showDesktopRecoveryAttempts = 0;
+            return;
+        }
+
+        var handle = new WindowInteropHelper(this).Handle;
+
+        if (!IsVisible)
+        {
+            Show();
+        }
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        if (handle != IntPtr.Zero)
+        {
+            NativeMethods.ShowWindowAsync(handle, SwShownoactivate);
+            NativeMethods.SetWindowPos(
+                handle,
+                ViewModel.Topmost ? HwndTopmost : HwndTop,
+                0,
+                0,
+                0,
+                0,
+                SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow | SwpFrameChanged);
+        }
+
+        ShowInTaskbar = false;
+        ApplyTaskbarVisibility(showInTaskbar: false);
+
+        if (_showDesktopRecoveryAttempts > 0)
+        {
+            _showDesktopRecoveryAttempts--;
+        }
+    }
+
+    private static bool IsNativeWindowSuppressed(IntPtr handle)
+    {
+        return handle != IntPtr.Zero
+            && (NativeMethods.IsIconic(handle)
+                || !NativeMethods.IsWindowVisible(handle)
+                || NativeMethods.IsWindowCloaked(handle));
+    }
+
+    private static bool IsShellDesktopForeground()
+    {
+        var foregroundWindow = NativeMethods.GetForegroundWindow();
+        if (foregroundWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var className = NativeMethods.GetWindowClassName(foregroundWindow);
+        return string.Equals(className, "Progman", StringComparison.Ordinal)
+            || string.Equals(className, "WorkerW", StringComparison.Ordinal)
+            || string.Equals(className, "SHELLDLL_DefView", StringComparison.Ordinal);
+    }
+
+    private void UpdateGeometry()
+    {
+        if (!IsLoaded || _isIconCollapsed || WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        if (double.IsFinite(Left))
+        {
+            ViewModel.X = Left;
+        }
+
+        if (double.IsFinite(Top))
+        {
+            ViewModel.Y = Top;
+        }
+
+        if (double.IsFinite(ActualWidth) && ActualWidth > 0)
+        {
+            ViewModel.Width = ActualWidth;
+        }
+
+        if (double.IsFinite(ActualHeight) && ActualHeight > 0)
+        {
+            ViewModel.Height = ActualHeight;
+        }
+    }
+
+    private static bool IsInsideButton(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is System.Windows.Controls.Button)
+            {
+                return true;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return false;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowPos
+    {
+        public IntPtr Hwnd;
+        public IntPtr HwndInsertAfter;
+        public int X;
+        public int Y;
+        public int Cx;
+        public int Cy;
+        public uint Flags;
+    }
+
+    private static class NativeMethods
+    {
+        private const int DwmwaCloaked = 14;
+
+        public static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex)
+        {
+            return IntPtr.Size == 8
+                ? GetWindowLongPtr64(hWnd, nIndex)
+                : new IntPtr(GetWindowLong32(hWnd, nIndex));
+        }
+
+        public static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        {
+            return IntPtr.Size == 8
+                ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong)
+                : new IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()));
+        }
+
+        public static bool IsWindowCloaked(IntPtr hWnd)
+        {
+            try
+            {
+                return DwmGetWindowAttribute(hWnd, DwmwaCloaked, out var cloaked, Marshal.SizeOf<int>()) == 0
+                    && cloaked != 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static string GetWindowClassName(IntPtr hWnd)
+        {
+            var className = new StringBuilder(256);
+            return GetClassName(hWnd, className, className.Capacity) > 0
+                ? className.ToString()
+                : string.Empty;
+        }
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+        private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+        private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll")]
+        internal static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        internal static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        internal static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        internal static extern bool SetWindowPos(
+            IntPtr hWnd,
+            IntPtr hWndInsertAfter,
+            int x,
+            int y,
+            int cx,
+            int cy,
+            uint uFlags);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmGetWindowAttribute(
+            IntPtr hwnd,
+            int dwAttribute,
+            out int pvAttribute,
+            int cbAttribute);
+    }
+}

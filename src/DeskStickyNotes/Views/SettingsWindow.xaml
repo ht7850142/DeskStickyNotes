@@ -1,0 +1,183 @@
+<Window x:Class="DeskStickyNotes.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource SettingsTitle}"
+        Icon="/Assets/AppIcon.ico"
+        Width="460"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        Background="#EEF2F7">
+    <Border Margin="14"
+            Padding="22"
+            Background="White"
+            BorderBrush="{StaticResource PanelBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24"
+                              ShadowDepth="2"
+                              Direction="270"
+                              Opacity="0.16"
+                              Color="#111827" />
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="18" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" LastChildFill="True">
+                <Image DockPanel.Dock="Left"
+                       Width="42"
+                       Height="42"
+                       Margin="0,0,12,0"
+                       Source="pack://application:,,,/Assets/AppIcon.png" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource SettingsTitle}"
+                               FontSize="22"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="{DynamicResource SettingsSubtitle}"
+                               Margin="0,3,0,0"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </DockPanel>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="155" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="42" />
+                    <RowDefinition Height="42" />
+                    <RowDefinition Height="52" />
+                    <RowDefinition Height="36" />
+                    <RowDefinition Height="36" />
+                    <RowDefinition Height="36" />
+                    <RowDefinition Height="52" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingLanguage}" />
+                <ComboBox Grid.Row="0"
+                          Grid.Column="1"
+                          ItemsSource="{Binding AvailableLanguages}"
+                          DisplayMemberPath="DisplayName"
+                          SelectedValuePath="Code"
+                          SelectedValue="{Binding Language}" />
+
+                <TextBlock Grid.Row="1"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingDefaultColor}" />
+                <ComboBox Grid.Row="1"
+                          Grid.Column="1"
+                          ItemsSource="{Binding AvailableColors}"
+                          SelectedValuePath="Code"
+                          SelectedValue="{Binding DefaultColor}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="13"
+                                        Height="13"
+                                        Margin="0,0,8,0"
+                                        CornerRadius="7"
+                                        Background="{Binding SwatchHex}"
+                                        BorderBrush="#55000000"
+                                        BorderThickness="1" />
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock Grid.Row="2"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingFontSize}" />
+                <StackPanel Grid.Row="2" Grid.Column="1">
+                    <TextBlock Text="{Binding DefaultFontSize, StringFormat={}{0:0} pt}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Right" />
+                    <Slider Minimum="10"
+                            Maximum="28"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding DefaultFontSize}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="3"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingStartWithWindows}" />
+                <CheckBox Grid.Row="3"
+                          Grid.Column="1"
+                          IsChecked="{Binding StartWithWindows}" />
+
+                <TextBlock Grid.Row="4"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingDefaultTopmost}" />
+                <CheckBox Grid.Row="4"
+                          Grid.Column="1"
+                          IsChecked="{Binding DefaultTopmost}" />
+
+                <TextBlock Grid.Row="5"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingKeepAfterWinD}" />
+                <CheckBox Grid.Row="5"
+                          Grid.Column="1"
+                          IsChecked="{Binding KeepNotesVisibleAfterShowDesktop}" />
+
+                <TextBlock Grid.Row="6"
+                           Grid.Column="0"
+                           Style="{StaticResource FieldLabelStyle}"
+                           Text="{DynamicResource SettingAutoSave}" />
+                <StackPanel Grid.Row="6" Grid.Column="1">
+                    <TextBlock Text="{Binding AutoSaveIntervalSeconds, StringFormat={}{0:0} seconds}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               HorizontalAlignment="Right" />
+                    <Slider Minimum="1"
+                            Maximum="60"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding AutoSaveIntervalSeconds}" />
+                </StackPanel>
+            </Grid>
+
+            <DockPanel Grid.Row="4"
+                       LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{DynamicResource SettingVersion}"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding AppVersion, StringFormat={} {0}}"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal">
+                    <Button Content="{DynamicResource ButtonCancel}"
+                            Margin="0,0,10,0"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding CancelCommand}" />
+                    <Button Content="{DynamicResource ButtonSave}"
+                            IsDefault="True"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding SaveCommand}" />
+                </StackPanel>
+            </DockPanel>
+        </Grid>
+    </Border>
+</Window>

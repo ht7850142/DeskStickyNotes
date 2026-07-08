@@ -1,0 +1,33 @@
+[Bb]in/
+[Oo]bj/
+**/[Bb]in/
+**/[Oo]bj/
+artifacts/
+TestResults/
+.vs/
+.vscode/
+.idea/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+*.log
+*.pdb
+
+# Local secrets and publish credentials
+.env
+.env.*
+!.env.example
+secrets.json
+appsettings.*.json
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+*.publishsettings
+*.pubxml.user
+
+# Local packaging dependency
+windowsdesktop-runtime-*.exe

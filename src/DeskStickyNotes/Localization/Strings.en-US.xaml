@@ -1,0 +1,63 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <sys:String x:Key="AppName">DeskStickyNotes</sys:String>
+    <sys:String x:Key="NoteTitle">Note</sys:String>
+
+    <sys:String x:Key="TrayNewNote">New Note</sys:String>
+    <sys:String x:Key="TrayShowAll">Show All Notes</sys:String>
+    <sys:String x:Key="TrayHideAll">Hide All Notes</sys:String>
+    <sys:String x:Key="TraySettings">Settings</sys:String>
+    <sys:String x:Key="TrayExit">Exit</sys:String>
+
+    <sys:String x:Key="TipChangeColor">Change note color</sys:String>
+    <sys:String x:Key="TipAlwaysOnTop">Always on top</sys:String>
+    <sys:String x:Key="TipCollapseNote">Collapse to icon</sys:String>
+    <sys:String x:Key="TipRestoreNote">Click to restore, drag to move</sys:String>
+    <sys:String x:Key="TipHideNote">Minimize to taskbar</sys:String>
+    <sys:String x:Key="TipDeleteNote">Delete this note</sys:String>
+    <sys:String x:Key="TipBold">Bold</sys:String>
+    <sys:String x:Key="TipItalic">Italic</sys:String>
+    <sys:String x:Key="TipUnderline">Underline</sys:String>
+    <sys:String x:Key="TipStrikethrough">Strikethrough</sys:String>
+    <sys:String x:Key="TipBulletList">Bullet list</sys:String>
+    <sys:String x:Key="TipNumberList">Numbered list</sys:String>
+    <sys:String x:Key="TipTodo">Todo item / toggle done</sys:String>
+    <sys:String x:Key="TipHeadingStyle">Text style</sys:String>
+    <sys:String x:Key="TipHyperlink">Insert hyperlink</sys:String>
+    <sys:String x:Key="TipAlignLeft">Align left</sys:String>
+    <sys:String x:Key="TipAlignCenter">Align center</sys:String>
+    <sys:String x:Key="TipAlignRight">Align right</sys:String>
+    <sys:String x:Key="StyleBody">Body</sys:String>
+    <sys:String x:Key="StyleTitle">Title</sys:String>
+    <sys:String x:Key="StyleHeading1">H1</sys:String>
+    <sys:String x:Key="StyleHeading2">H2</sys:String>
+    <sys:String x:Key="StyleHeading3">H3</sys:String>
+    <sys:String x:Key="HyperlinkDialogTitle">Insert Link</sys:String>
+    <sys:String x:Key="HyperlinkDialogText">Text</sys:String>
+    <sys:String x:Key="HyperlinkDialogUrl">URL</sys:String>
+    <sys:String x:Key="HyperlinkDialogOk">Insert</sys:String>
+    <sys:String x:Key="HyperlinkDialogCancel">Cancel</sys:String>
+
+    <sys:String x:Key="SettingsTitle">Settings</sys:String>
+    <sys:String x:Key="SettingsSubtitle">Defaults for new notes and app startup.</sys:String>
+    <sys:String x:Key="SettingLanguage">Language</sys:String>
+    <sys:String x:Key="SettingDefaultColor">Default color</sys:String>
+    <sys:String x:Key="SettingFontSize">Font size</sys:String>
+    <sys:String x:Key="SettingStartWithWindows">Start with Windows</sys:String>
+    <sys:String x:Key="SettingDefaultTopmost">Default topmost</sys:String>
+    <sys:String x:Key="SettingKeepAfterWinD">Keep after Win+D</sys:String>
+    <sys:String x:Key="SettingAutoSave">Auto-save</sys:String>
+    <sys:String x:Key="SettingVersion">Version</sys:String>
+    <sys:String x:Key="ButtonCancel">Cancel</sys:String>
+    <sys:String x:Key="ButtonSave">Save</sys:String>
+
+    <sys:String x:Key="DeleteConfirmTitle">DeskStickyNotes</sys:String>
+    <sys:String x:Key="DeleteConfirmText">Delete this note?</sys:String>
+
+    <sys:String x:Key="ColorYellow">Yellow</sys:String>
+    <sys:String x:Key="ColorGreen">Green</sys:String>
+    <sys:String x:Key="ColorBlue">Blue</sys:String>
+    <sys:String x:Key="ColorPink">Pink</sys:String>
+    <sys:String x:Key="ColorWhite">White</sys:String>
+</ResourceDictionary>
