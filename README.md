@@ -83,8 +83,6 @@ The installer lets users choose a custom install path and re-install over an exi
 
 ![DeskStickyNotes collapsed draggable note icon](docs/images/collapsed-icon.png)
 
-More screenshot notes: [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md)
-
 ## Requirements
 
 For users:
@@ -187,7 +185,7 @@ src/DeskStickyNotes/   WPF app source code
   Assets/             App icon files
 installer/            Inno Setup script and installer image
 scripts/              Packaging script
-docs/                 Architecture, release notes, and development prompt
+docs/                 Architecture, release guide, development prompt, and images
 ```
 
 Architecture notes: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)

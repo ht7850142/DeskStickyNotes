@@ -6,7 +6,6 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
-- Add screenshots to the README.
 - Add automated UI smoke tests if the project grows beyond manual verification.
 
 ## [0.2.7] - 2026-07-08

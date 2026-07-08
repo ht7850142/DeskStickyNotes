@@ -82,8 +82,6 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 
 ![DeskStickyNotes 可拖动的折叠便签图标](docs/images/collapsed-icon.png)
 
-更多截图说明见 [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md)。
-
 ## 开发环境
 
 - Windows 10/11
@@ -156,7 +154,7 @@ src/DeskStickyNotes/   WPF 应用源码
   Assets/             应用图标
 installer/            Inno Setup 安装脚本和安装器图片
 scripts/              打包脚本
-docs/                 架构、发布说明和开发提示词
+docs/                 架构、发布指南、开发提示词和图片
 ```
 
 ## 数据和隐私
