@@ -8,6 +8,12 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 - Add automated UI smoke tests if the project grows beyond manual verification.
 
+## [0.2.8] - 2026-07-10
+
+- Automatically fit pasted screenshots to the available note width.
+- Added edge and corner drag resizing, Ctrl + mouse wheel resizing, and a right-click size menu for images.
+- Persist embedded images with rich note content while retaining compatibility with existing text notes.
+
 ## [0.2.7] - 2026-07-08
 
 - Fixed hyperlink dialog spacing so the URL field is not clipped by the action buttons.

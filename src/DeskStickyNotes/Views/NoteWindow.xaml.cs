@@ -11,6 +11,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using DeskStickyNotes.Models;
@@ -40,6 +41,11 @@ public partial class NoteWindow : Window
     private const int HtBottomRight = 17;
     private const int SwShownoactivate = 4;
     private const int ResizeBorderPixels = 10;
+    private const double ImageResizeStep = 1.12;
+    private const double ImageMinWidth = 80;
+    private const double ImageEditorMargin = 24;
+    private const double ImageResizeHitArea = 9;
+    private const string XamlPackagePrefix = "xamlpackage;base64,";
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoZOrder = 0x0004;
@@ -58,6 +64,11 @@ public partial class NoteWindow : Window
     private bool _collapsedIconWasDragged;
     private bool _isIconCollapsed;
     private bool _isLoadingEditor;
+    private System.Windows.Controls.Image? _resizingImage;
+    private System.Windows.Point _imageResizeStart;
+    private double _imageResizeStartWidth;
+    private bool _imageResizeChanged;
+    private ImageResizeEdge _imageResizeEdge;
     private bool _isCollapsedIconMouseDown;
     private bool _isTitleMouseDown;
     private bool _isTaskbarMinimized;
@@ -76,6 +87,7 @@ public partial class NoteWindow : Window
         Width = viewModel.Width;
         Height = viewModel.Height;
         Editor.AddHandler(Hyperlink.RequestNavigateEvent, new RequestNavigateEventHandler(Hyperlink_RequestNavigate));
+        System.Windows.DataObject.AddPastingHandler(Editor, Editor_Pasting);
         LoadEditorContent();
 
         _showDesktopRecoveryTimer = new DispatcherTimer
@@ -641,6 +653,19 @@ public partial class NoteWindow : Window
         }
     }
 
+    private void Editor_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        var bitmap = GetPastedBitmap(e.SourceDataObject);
+        if (bitmap is null)
+        {
+            return;
+        }
+
+        e.CancelCommand();
+        InsertImage(bitmap);
+        SaveEditorContent();
+    }
+
     private void LoadEditorContent()
     {
         _isLoadingEditor = true;
@@ -650,9 +675,10 @@ public partial class NoteWindow : Window
 
             if (!string.IsNullOrWhiteSpace(ViewModel.RichContent))
             {
-                using var stream = new MemoryStream(Encoding.UTF8.GetBytes(ViewModel.RichContent));
-                new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd)
-                    .Load(stream, System.Windows.DataFormats.Xaml);
+                var format = System.Windows.DataFormats.Xaml;
+                using var stream = CreateRichContentStream(ViewModel.RichContent, ref format);
+                new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd).Load(stream, format);
+                Dispatcher.BeginInvoke(ConfigureImagesInDocument, DispatcherPriority.Loaded);
                 return;
             }
 
@@ -673,11 +699,376 @@ public partial class NoteWindow : Window
     {
         var range = new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd);
         using var stream = new MemoryStream();
-        range.Save(stream, System.Windows.DataFormats.Xaml);
+        range.Save(stream, System.Windows.DataFormats.XamlPackage);
 
         var plainText = range.Text.TrimEnd('\r', '\n');
-        var richContent = Encoding.UTF8.GetString(stream.ToArray());
+        var richContent = XamlPackagePrefix + Convert.ToBase64String(stream.ToArray());
         ViewModel.UpdateContent(plainText, richContent);
+    }
+
+    private static MemoryStream CreateRichContentStream(string richContent, ref string format)
+    {
+        if (richContent.StartsWith(XamlPackagePrefix, StringComparison.Ordinal))
+        {
+            format = System.Windows.DataFormats.XamlPackage;
+            return new MemoryStream(Convert.FromBase64String(richContent[XamlPackagePrefix.Length..]));
+        }
+
+        format = System.Windows.DataFormats.Xaml;
+        return new MemoryStream(Encoding.UTF8.GetBytes(richContent));
+    }
+
+    private static BitmapSource? GetPastedBitmap(System.Windows.IDataObject dataObject)
+    {
+        try
+        {
+            if (dataObject.GetDataPresent(System.Windows.DataFormats.Bitmap)
+                && dataObject.GetData(System.Windows.DataFormats.Bitmap) is BitmapSource bitmap)
+            {
+                return bitmap;
+            }
+
+            return System.Windows.Clipboard.ContainsImage() ? System.Windows.Clipboard.GetImage() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void InsertImage(BitmapSource bitmap)
+    {
+        var image = CreateEditableImage(bitmap);
+        var insertionPosition = Editor.CaretPosition.GetInsertionPosition(LogicalDirection.Forward);
+        var container = new InlineUIContainer(image, insertionPosition);
+        Editor.CaretPosition = container.ElementEnd;
+        Editor.CaretPosition.InsertTextInRun(" ");
+    }
+
+    private System.Windows.Controls.Image CreateEditableImage(BitmapSource bitmap)
+    {
+        var source = bitmap;
+        if (source.CanFreeze)
+        {
+            source.Freeze();
+        }
+
+        var image = new System.Windows.Controls.Image
+        {
+            Source = source,
+            Width = GetInitialImageWidth(source),
+            Stretch = Stretch.Uniform
+        };
+
+        ConfigureImage(image);
+        return image;
+    }
+
+    private void ConfigureImage(System.Windows.Controls.Image image)
+    {
+        image.Cursor = System.Windows.Input.Cursors.Arrow;
+        image.ToolTip = DeskStickyNotes.Services.LocalizationService.Get("TipResizeImage");
+        image.PreviewMouseLeftButtonDown -= Image_PreviewMouseLeftButtonDown;
+        image.PreviewMouseLeftButtonDown += Image_PreviewMouseLeftButtonDown;
+        image.PreviewMouseMove -= Image_PreviewMouseMove;
+        image.PreviewMouseMove += Image_PreviewMouseMove;
+        image.MouseLeave -= Image_MouseLeave;
+        image.MouseLeave += Image_MouseLeave;
+        image.PreviewMouseLeftButtonUp -= Image_PreviewMouseLeftButtonUp;
+        image.PreviewMouseLeftButtonUp += Image_PreviewMouseLeftButtonUp;
+        image.LostMouseCapture -= Image_LostMouseCapture;
+        image.LostMouseCapture += Image_LostMouseCapture;
+        image.PreviewMouseWheel -= Image_PreviewMouseWheel;
+        image.PreviewMouseWheel += Image_PreviewMouseWheel;
+        image.ContextMenu = CreateImageContextMenu(image);
+    }
+
+    private ContextMenu CreateImageContextMenu(System.Windows.Controls.Image image)
+    {
+        var menu = new ContextMenu();
+        var smaller = new MenuItem { Header = DeskStickyNotes.Services.LocalizationService.Get("ImageMenuSmaller") };
+        smaller.Click += (_, _) => ResizeImage(image, 1 / ImageResizeStep);
+
+        var larger = new MenuItem { Header = DeskStickyNotes.Services.LocalizationService.Get("ImageMenuLarger") };
+        larger.Click += (_, _) => ResizeImage(image, ImageResizeStep);
+
+        var fit = new MenuItem { Header = DeskStickyNotes.Services.LocalizationService.Get("ImageMenuFitWidth") };
+        fit.Click += (_, _) => FitImageToEditor(image);
+
+        menu.Items.Add(smaller);
+        menu.Items.Add(larger);
+        menu.Items.Add(fit);
+        return menu;
+    }
+
+    private void Image_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Image image || (Keyboard.Modifiers & ModifierKeys.Control) == 0)
+        {
+            return;
+        }
+
+        ResizeImage(image, e.Delta > 0 ? ImageResizeStep : 1 / ImageResizeStep);
+        e.Handled = true;
+    }
+
+    private void Image_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Image image || e.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        var edge = GetImageResizeEdge(image, e.GetPosition(image));
+        if (edge == ImageResizeEdge.None)
+        {
+            return;
+        }
+
+        _resizingImage = image;
+        _imageResizeEdge = edge;
+        _imageResizeStart = e.GetPosition(Editor);
+        _imageResizeStartWidth = GetImageWidth(image);
+        _imageResizeChanged = false;
+        image.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void Image_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Image image)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(_resizingImage, image) || !image.IsMouseCaptured)
+        {
+            UpdateImageResizeCursor(image, e.GetPosition(image));
+            return;
+        }
+
+        if (e.LeftButton != MouseButtonState.Pressed)
+        {
+            FinishImageResize(image);
+            return;
+        }
+
+        var currentPosition = e.GetPosition(Editor);
+        var deltaX = currentPosition.X - _imageResizeStart.X;
+        var deltaY = currentPosition.Y - _imageResizeStart.Y;
+        var delta = GetImageWidthDelta(image, _imageResizeEdge, deltaX, deltaY);
+        var maxWidth = Math.Max(ImageMinWidth, GetMaxImageWidth());
+        var width = Math.Clamp(_imageResizeStartWidth + delta, ImageMinWidth, maxWidth);
+        if (Math.Abs(width - GetImageWidth(image)) >= 0.5)
+        {
+            image.Width = width;
+            _imageResizeChanged = true;
+        }
+
+        e.Handled = true;
+    }
+
+    private void Image_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Image image && !ReferenceEquals(_resizingImage, image))
+        {
+            image.Cursor = System.Windows.Input.Cursors.Arrow;
+        }
+    }
+
+    private void Image_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Image image || !ReferenceEquals(_resizingImage, image))
+        {
+            return;
+        }
+
+        FinishImageResize(image);
+        e.Handled = true;
+    }
+
+    private void Image_LostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Image image || !ReferenceEquals(_resizingImage, image))
+        {
+            return;
+        }
+
+        var changed = _imageResizeChanged;
+        ResetImageResizeState();
+        if (changed)
+        {
+            SaveEditorContent();
+        }
+    }
+
+    private void FinishImageResize(System.Windows.Controls.Image image)
+    {
+        var changed = _imageResizeChanged;
+        ResetImageResizeState();
+        if (image.IsMouseCaptured)
+        {
+            image.ReleaseMouseCapture();
+        }
+
+        if (changed)
+        {
+            SaveEditorContent();
+        }
+    }
+
+    private void ResetImageResizeState()
+    {
+        _resizingImage = null;
+        _imageResizeEdge = ImageResizeEdge.None;
+        _imageResizeStartWidth = 0;
+        _imageResizeChanged = false;
+    }
+
+    private static ImageResizeEdge GetImageResizeEdge(
+        System.Windows.Controls.Image image,
+        System.Windows.Point position)
+    {
+        if (image.ActualWidth <= 0 || image.ActualHeight <= 0)
+        {
+            return ImageResizeEdge.None;
+        }
+
+        var hitArea = Math.Min(ImageResizeHitArea, Math.Min(image.ActualWidth, image.ActualHeight) / 3);
+        var left = position.X <= hitArea;
+        var right = position.X >= image.ActualWidth - hitArea;
+        var top = position.Y <= hitArea;
+        var bottom = position.Y >= image.ActualHeight - hitArea;
+
+        if (top && left) return ImageResizeEdge.TopLeft;
+        if (top && right) return ImageResizeEdge.TopRight;
+        if (bottom && left) return ImageResizeEdge.BottomLeft;
+        if (bottom && right) return ImageResizeEdge.BottomRight;
+        if (left) return ImageResizeEdge.Left;
+        if (right) return ImageResizeEdge.Right;
+        if (top) return ImageResizeEdge.Top;
+        if (bottom) return ImageResizeEdge.Bottom;
+        return ImageResizeEdge.None;
+    }
+
+    private static void UpdateImageResizeCursor(
+        System.Windows.Controls.Image image,
+        System.Windows.Point position)
+    {
+        image.Cursor = GetImageResizeEdge(image, position) switch
+        {
+            ImageResizeEdge.Left or ImageResizeEdge.Right => System.Windows.Input.Cursors.SizeWE,
+            ImageResizeEdge.Top or ImageResizeEdge.Bottom => System.Windows.Input.Cursors.SizeNS,
+            ImageResizeEdge.TopLeft or ImageResizeEdge.BottomRight => System.Windows.Input.Cursors.SizeNWSE,
+            ImageResizeEdge.TopRight or ImageResizeEdge.BottomLeft => System.Windows.Input.Cursors.SizeNESW,
+            _ => System.Windows.Input.Cursors.Arrow
+        };
+    }
+
+    private static double GetImageWidthDelta(
+        System.Windows.Controls.Image image,
+        ImageResizeEdge edge,
+        double deltaX,
+        double deltaY)
+    {
+        var aspectRatio = image.ActualHeight > 0
+            ? GetImageWidth(image) / image.ActualHeight
+            : 1;
+        var horizontalDelta = edge is ImageResizeEdge.Left or ImageResizeEdge.TopLeft or ImageResizeEdge.BottomLeft
+            ? -deltaX
+            : deltaX;
+        var verticalDelta = edge is ImageResizeEdge.Top or ImageResizeEdge.TopLeft or ImageResizeEdge.TopRight
+            ? -deltaY * aspectRatio
+            : deltaY * aspectRatio;
+
+        return edge switch
+        {
+            ImageResizeEdge.Left or ImageResizeEdge.Right => horizontalDelta,
+            ImageResizeEdge.Top or ImageResizeEdge.Bottom => verticalDelta,
+            _ => Math.Abs(horizontalDelta) >= Math.Abs(verticalDelta) ? horizontalDelta : verticalDelta
+        };
+    }
+
+    private void ResizeImage(System.Windows.Controls.Image image, double scale)
+    {
+        var currentWidth = GetImageWidth(image);
+        var maxWidth = GetMaxImageWidth();
+        image.Width = Math.Clamp(currentWidth * scale, ImageMinWidth, Math.Max(ImageMinWidth, maxWidth));
+        SaveEditorContent();
+    }
+
+    private void FitImageToEditor(System.Windows.Controls.Image image)
+    {
+        image.Width = GetMaxImageWidth();
+        SaveEditorContent();
+    }
+
+    private double GetInitialImageWidth(BitmapSource source)
+    {
+        var naturalWidth = source.PixelWidth * 96.0 / Math.Max(1, source.DpiX);
+        return Math.Min(naturalWidth, GetMaxImageWidth());
+    }
+
+    private double GetMaxImageWidth()
+    {
+        var width = Editor.ActualWidth - Editor.Padding.Left - Editor.Padding.Right - ImageEditorMargin;
+        return Math.Max(ImageMinWidth, double.IsFinite(width) && width > 0 ? width : 320);
+    }
+
+    private static double GetImageWidth(System.Windows.Controls.Image image)
+    {
+        if (double.IsFinite(image.Width) && image.Width > 0)
+        {
+            return image.Width;
+        }
+
+        if (image.ActualWidth > 0)
+        {
+            return image.ActualWidth;
+        }
+
+        return image.Source is BitmapSource source
+            ? source.PixelWidth * 96.0 / Math.Max(1, source.DpiX)
+            : ImageMinWidth;
+    }
+
+    private void ConfigureImagesInDocument()
+    {
+        foreach (var image in FindVisualChildren<System.Windows.Controls.Image>(Editor))
+        {
+            ConfigureImage(image);
+        }
+    }
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild)
+            {
+                yield return typedChild;
+            }
+
+            foreach (var descendant in FindVisualChildren<T>(child))
+            {
+                yield return descendant;
+            }
+        }
+    }
+
+    private enum ImageResizeEdge
+    {
+        None,
+        Left,
+        Top,
+        Right,
+        Bottom,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
     }
 
     private void ApplyHeadingStyle(string style)

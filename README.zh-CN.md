@@ -125,10 +125,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 当前输出：
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.2.7-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.2.7-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.2.7-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.2.7-runtime.exe
+artifacts\installer\DeskStickyNotes-portable-0.2.8-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.2.8-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.2.8-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.2.8-runtime.exe
 ```
 
 如果要生成内置运行时的安装包，需要把运行时安装器放在仓库根目录：

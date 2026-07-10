@@ -20,7 +20,7 @@
 
 #define RuntimeInstallerName "windowsdesktop-runtime-8.0.28-win-x64.exe"
 #define MyAppName "DeskStickyNotes"
-#define MyAppVersion "0.2.7"
+#define MyAppVersion "0.2.8"
 #define MyAppPublisher "DeskStickyNotes"
 #define MyAppExeName "DeskStickyNotes.exe"
 

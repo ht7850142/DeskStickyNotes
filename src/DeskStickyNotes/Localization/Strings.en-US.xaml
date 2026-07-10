@@ -28,6 +28,10 @@
     <sys:String x:Key="TipAlignLeft">Align left</sys:String>
     <sys:String x:Key="TipAlignCenter">Align center</sys:String>
     <sys:String x:Key="TipAlignRight">Align right</sys:String>
+    <sys:String x:Key="TipResizeImage">Drag an image edge or corner to resize, or use Ctrl + wheel or the right-click menu</sys:String>
+    <sys:String x:Key="ImageMenuSmaller">Make image smaller</sys:String>
+    <sys:String x:Key="ImageMenuLarger">Make image larger</sys:String>
+    <sys:String x:Key="ImageMenuFitWidth">Fit to note width</sys:String>
     <sys:String x:Key="StyleBody">Body</sys:String>
     <sys:String x:Key="StyleTitle">Title</sys:String>
     <sys:String x:Key="StyleHeading1">H1</sys:String>

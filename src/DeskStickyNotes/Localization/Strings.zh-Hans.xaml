@@ -28,6 +28,10 @@
     <sys:String x:Key="TipAlignLeft">左对齐</sys:String>
     <sys:String x:Key="TipAlignCenter">居中对齐</sys:String>
     <sys:String x:Key="TipAlignRight">右对齐</sys:String>
+    <sys:String x:Key="TipResizeImage">拖动图片边缘或四角调整大小，也可使用 Ctrl + 滚轮或右键菜单</sys:String>
+    <sys:String x:Key="ImageMenuSmaller">缩小图片</sys:String>
+    <sys:String x:Key="ImageMenuLarger">放大图片</sys:String>
+    <sys:String x:Key="ImageMenuFitWidth">适应便签宽度</sys:String>
     <sys:String x:Key="StyleBody">正文</sys:String>
     <sys:String x:Key="StyleTitle">标题</sys:String>
     <sys:String x:Key="StyleHeading1">一级</sys:String>
