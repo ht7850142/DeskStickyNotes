@@ -5,6 +5,7 @@ param(
     [switch]$SelfContained,
     [switch]$IncludeRuntime,
     [switch]$AllInstallers,
+    [switch]$NoRestore,
     [string]$RuntimeInstaller = "",
     [switch]$SkipInstaller
 )
@@ -15,7 +16,7 @@ $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $project = Join-Path $root "src\DeskStickyNotes\DeskStickyNotes.csproj"
 $installerDir = Join-Path $root "artifacts\installer"
 $installerScript = Join-Path $root "installer\DeskStickyNotes.iss"
-$appVersion = "0.2.8"
+$appVersion = "0.2.9"
 
 function Resolve-DotNet {
     $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
@@ -94,6 +95,10 @@ function Publish-App(
 
     if ($PublishSelfContained) {
         $publishArgs += "-p:EnableCompressionInSingleFile=true"
+    }
+
+    if ($NoRestore) {
+        $publishArgs += "--no-restore"
     }
 
     & $dotnet @publishArgs

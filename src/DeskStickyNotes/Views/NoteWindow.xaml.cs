@@ -188,6 +188,11 @@ public partial class NoteWindow : Window
             element.ReleaseMouseCapture();
         }
 
+        if (WindowState == WindowState.Maximized)
+        {
+            RestoreMaximizedWindowForDrag(position);
+        }
+
         try
         {
             DragMove();
@@ -312,11 +317,12 @@ public partial class NoteWindow : Window
 
         SaveEditorContent();
 
-        _expandedBounds = new Rect(
-            Left,
-            Top,
-            ActualWidth > 0 ? ActualWidth : Width,
-            ActualHeight > 0 ? ActualHeight : Height);
+        _expandedBounds = GetNormalWindowBounds();
+        if (WindowState == WindowState.Maximized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
         _expandedMinWidth = MinWidth;
         _expandedMinHeight = MinHeight;
         _expandedResizeMode = ResizeMode;
@@ -337,6 +343,63 @@ public partial class NoteWindow : Window
         Height = CollapsedIconSize;
         ShowInTaskbar = false;
         ApplyTaskbarVisibility(showInTaskbar: false);
+    }
+
+    private void RestoreMaximizedWindowForDrag(System.Windows.Point titlePosition)
+    {
+        var restoredBounds = GetNormalWindowBounds();
+        var maximizedWidth = Math.Max(1, ActualWidth);
+        var horizontalRatio = Math.Clamp(titlePosition.X / maximizedWidth, 0, 1);
+        var screenPosition = PointToScreen(titlePosition);
+        var compositionTarget = PresentationSource.FromVisual(this)?.CompositionTarget;
+        if (compositionTarget is not null)
+        {
+            screenPosition = compositionTarget.TransformFromDevice.Transform(screenPosition);
+        }
+
+        WindowState = WindowState.Normal;
+        Width = restoredBounds.Width;
+        Height = restoredBounds.Height;
+        Left = screenPosition.X - (restoredBounds.Width * horizontalRatio);
+        Top = screenPosition.Y - Math.Min(titlePosition.Y, 38);
+        UpdateLayout();
+    }
+
+    private Rect GetNormalWindowBounds()
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            var restoredBounds = RestoreBounds;
+            if (IsUsableWindowBounds(restoredBounds))
+            {
+                return restoredBounds;
+            }
+        }
+
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+        var bounds = new Rect(Left, Top, width, height);
+        if (IsUsableWindowBounds(bounds))
+        {
+            return bounds;
+        }
+
+        return new Rect(
+            ViewModel.X,
+            ViewModel.Y,
+            Math.Max(MinWidth, ViewModel.Width),
+            Math.Max(MinHeight, ViewModel.Height));
+    }
+
+    private static bool IsUsableWindowBounds(Rect bounds)
+    {
+        return !bounds.IsEmpty
+            && double.IsFinite(bounds.Left)
+            && double.IsFinite(bounds.Top)
+            && double.IsFinite(bounds.Width)
+            && double.IsFinite(bounds.Height)
+            && bounds.Width > 0
+            && bounds.Height > 0;
     }
 
     private void RestoreFromIcon()

@@ -141,10 +141,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Current package names:
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.2.8-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.2.8-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.2.8-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.2.8-runtime.exe
+artifacts\installer\DeskStickyNotes-portable-0.2.9-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.2.9-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.2.9-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.2.9-runtime.exe
 ```
 
 To build the runtime installer, place the Microsoft runtime installer at the repository root:

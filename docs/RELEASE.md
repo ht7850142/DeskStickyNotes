@@ -45,6 +45,12 @@ Do not commit it. It is ignored by `.gitignore`.
 powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 ```
 
+If package restore has already completed and the SDK cannot reach its configured package source, reuse the existing assets with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers -NoRestore
+```
+
 Expected outputs:
 
 ```text

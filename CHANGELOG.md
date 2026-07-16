@@ -8,6 +8,11 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 - Add automated UI smoke tests if the project grows beyond manual verification.
 
+## [0.2.9] - 2026-07-16
+
+- Fixed maximized notes so dragging the title bar restores the previous window size.
+- Preserved normal window bounds when collapsing a maximized note into an icon.
+
 ## [0.2.8] - 2026-07-10
 
 - Automatically fit pasted screenshots to the available note width.
