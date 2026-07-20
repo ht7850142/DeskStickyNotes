@@ -231,7 +231,7 @@
                 <RichTextBox x:Name="Editor"
                              FontSize="{Binding FontSize}"
                              FontFamily="Segoe UI, Microsoft YaHei UI"
-                             Foreground="#202124"
+                             Foreground="{Binding TextForegroundHex}"
                              CaretBrush="#2563EB"
                              SelectionBrush="#93C5FD"
                              Background="Transparent"

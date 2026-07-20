@@ -10,7 +10,7 @@
     <sys:String x:Key="TraySettings">Settings</sys:String>
     <sys:String x:Key="TrayExit">Exit</sys:String>
 
-    <sys:String x:Key="TipChangeColor">Change note color</sys:String>
+    <sys:String x:Key="TipChangeColor">Adjust note appearance</sys:String>
     <sys:String x:Key="TipAlwaysOnTop">Always on top</sys:String>
     <sys:String x:Key="TipCollapseNote">Collapse to icon</sys:String>
     <sys:String x:Key="TipRestoreNote">Click to restore, drag to move</sys:String>
@@ -32,6 +32,12 @@
     <sys:String x:Key="ImageMenuSmaller">Make image smaller</sys:String>
     <sys:String x:Key="ImageMenuLarger">Make image larger</sys:String>
     <sys:String x:Key="ImageMenuFitWidth">Fit to note width</sys:String>
+    <sys:String x:Key="AppearanceNoteColor">Note color</sys:String>
+    <sys:String x:Key="AppearanceBackgroundOpacity">Background opacity</sys:String>
+    <sys:String x:Key="AppearanceTextColor">Text color</sys:String>
+    <sys:String x:Key="TextColorAuto">Auto</sys:String>
+    <sys:String x:Key="TextColorDark">Dark</sys:String>
+    <sys:String x:Key="TextColorLight">Light</sys:String>
     <sys:String x:Key="StyleBody">Body</sys:String>
     <sys:String x:Key="StyleTitle">Title</sys:String>
     <sys:String x:Key="StyleHeading1">H1</sys:String>

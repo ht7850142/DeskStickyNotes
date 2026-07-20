@@ -10,7 +10,7 @@
     <sys:String x:Key="TraySettings">设置</sys:String>
     <sys:String x:Key="TrayExit">退出</sys:String>
 
-    <sys:String x:Key="TipChangeColor">更换便签颜色</sys:String>
+    <sys:String x:Key="TipChangeColor">调整便签外观</sys:String>
     <sys:String x:Key="TipAlwaysOnTop">置顶显示</sys:String>
     <sys:String x:Key="TipCollapseNote">折叠为图标</sys:String>
     <sys:String x:Key="TipRestoreNote">点击还原，拖动移动</sys:String>
@@ -32,6 +32,12 @@
     <sys:String x:Key="ImageMenuSmaller">缩小图片</sys:String>
     <sys:String x:Key="ImageMenuLarger">放大图片</sys:String>
     <sys:String x:Key="ImageMenuFitWidth">适应便签宽度</sys:String>
+    <sys:String x:Key="AppearanceNoteColor">便签颜色</sys:String>
+    <sys:String x:Key="AppearanceBackgroundOpacity">背景不透明度</sys:String>
+    <sys:String x:Key="AppearanceTextColor">文字颜色</sys:String>
+    <sys:String x:Key="TextColorAuto">自动</sys:String>
+    <sys:String x:Key="TextColorDark">深色</sys:String>
+    <sys:String x:Key="TextColorLight">浅色</sys:String>
     <sys:String x:Key="StyleBody">正文</sys:String>
     <sys:String x:Key="StyleTitle">标题</sys:String>
     <sys:String x:Key="StyleHeading1">一级</sys:String>

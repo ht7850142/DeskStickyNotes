@@ -28,6 +28,10 @@ public sealed class NoteModel
 
     public string Color { get; set; } = NotePalette.Yellow;
 
+    public double BackgroundOpacity { get; set; } = NoteAppearance.MaxBackgroundOpacity;
+
+    public string TextColorMode { get; set; } = NoteTextColorMode.Auto;
+
     public bool Topmost { get; set; }
 
     public bool Visible { get; set; } = true;

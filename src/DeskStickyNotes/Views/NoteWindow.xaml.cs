@@ -468,12 +468,23 @@ public partial class NoteWindow : Window
         }
 
         var items = new List<UIElement>();
+        items.Add(CreateFlyoutSectionHeader("AppearanceNoteColor"));
         foreach (var color in NotePalette.Names)
         {
             items.Add(CreateColorFlyoutButton(color));
         }
 
-        ShowFlyout(button, items, 118);
+        items.Add(CreateFlyoutSeparator());
+        items.Add(CreateFlyoutSectionHeader("AppearanceBackgroundOpacity"));
+        items.Add(CreateOpacityControl());
+        items.Add(CreateFlyoutSeparator());
+        items.Add(CreateFlyoutSectionHeader("AppearanceTextColor"));
+        foreach (var mode in NoteTextColorMode.Names)
+        {
+            items.Add(CreateTextColorFlyoutButton(mode));
+        }
+
+        ShowFlyout(button, items, 228);
     }
 
     private void EditorToolButton_Click(object sender, RoutedEventArgs e)
@@ -632,6 +643,69 @@ public partial class NoteWindow : Window
         };
     }
 
+    private UIElement CreateFlyoutSectionHeader(string resourceKey)
+    {
+        return new TextBlock
+        {
+            Text = Services.LocalizationService.Get(resourceKey),
+            Margin = new Thickness(9, 5, 9, 3),
+            Foreground = ToBrush("#667085"),
+            FontSize = 11,
+            FontWeight = FontWeights.SemiBold
+        };
+    }
+
+    private static UIElement CreateFlyoutSeparator()
+    {
+        return new Border
+        {
+            Height = 1,
+            Margin = new Thickness(7, 5, 7, 4),
+            Background = ToBrush("#24000000")
+        };
+    }
+
+    private UIElement CreateOpacityControl()
+    {
+        var panel = new Grid
+        {
+            Margin = new Thickness(9, 0, 9, 5)
+        };
+        panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var valueLabel = new TextBlock
+        {
+            Text = $"{Math.Round(ViewModel.BackgroundOpacity * 100):0}%",
+            Margin = new Thickness(0, 0, 0, 2),
+            Foreground = ToBrush("#475467"),
+            FontSize = 12,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+        };
+        Grid.SetRow(valueLabel, 0);
+        panel.Children.Add(valueLabel);
+
+        var slider = new Slider
+        {
+            Minimum = NoteAppearance.MinBackgroundOpacity * 100,
+            Maximum = NoteAppearance.MaxBackgroundOpacity * 100,
+            Value = ViewModel.BackgroundOpacity * 100,
+            TickFrequency = 5,
+            IsSnapToTickEnabled = false,
+            SmallChange = 1,
+            LargeChange = 10,
+            ToolTip = Services.LocalizationService.Get("AppearanceBackgroundOpacity")
+        };
+        slider.ValueChanged += (_, e) =>
+        {
+            ViewModel.BackgroundOpacity = e.NewValue / 100;
+            valueLabel.Text = $"{Math.Round(e.NewValue):0}%";
+        };
+        Grid.SetRow(slider, 1);
+        panel.Children.Add(slider);
+        return panel;
+    }
+
     private System.Windows.Controls.Button CreateColorFlyoutButton(string color)
     {
         var palette = NotePalette.Get(color);
@@ -679,11 +753,91 @@ public partial class NoteWindow : Window
         var button = CreateFlyoutButton(grid);
         button.Click += (_, _) =>
         {
-            CloseOpenFlyout();
             ViewModel.SetColorCommand.Execute(color);
+            ApplyTextColorToDocument();
+            CloseOpenFlyout();
         };
 
         return button;
+    }
+
+    private System.Windows.Controls.Button CreateTextColorFlyoutButton(string mode)
+    {
+        var normalizedMode = NoteTextColorMode.Normalize(mode);
+        var isSelected = string.Equals(ViewModel.TextColorMode, normalizedMode, StringComparison.OrdinalIgnoreCase);
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var swatch = new Border
+        {
+            Width = 15,
+            Height = 15,
+            Margin = new Thickness(0, 0, 8, 0),
+            CornerRadius = new CornerRadius(7.5),
+            Background = CreateTextColorSwatch(normalizedMode),
+            BorderBrush = ToBrush("#66000000"),
+            BorderThickness = new Thickness(1)
+        };
+        Grid.SetColumn(swatch, 0);
+        grid.Children.Add(swatch);
+
+        var resourceKey = normalizedMode switch
+        {
+            NoteTextColorMode.Dark => "TextColorDark",
+            NoteTextColorMode.Light => "TextColorLight",
+            _ => "TextColorAuto"
+        };
+        var label = new TextBlock
+        {
+            Text = Services.LocalizationService.Get(resourceKey),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(label, 1);
+        grid.Children.Add(label);
+
+        var check = new TextBlock
+        {
+            Text = isSelected ? "✓" : "",
+            Width = 16,
+            Foreground = ToBrush("#2563EB"),
+            FontSize = 13,
+            FontWeight = FontWeights.Bold,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center
+        };
+        Grid.SetColumn(check, 2);
+        grid.Children.Add(check);
+
+        var button = CreateFlyoutButton(grid);
+        button.Click += (_, _) =>
+        {
+            ViewModel.TextColorMode = normalizedMode;
+            ApplyTextColorToDocument();
+            CloseOpenFlyout();
+        };
+        return button;
+    }
+
+    private System.Windows.Media.Brush CreateTextColorSwatch(string mode)
+    {
+        if (mode == NoteTextColorMode.Dark)
+        {
+            return ToBrush(NoteAppearance.DarkText);
+        }
+
+        if (mode == NoteTextColorMode.Light)
+        {
+            return ToBrush(NoteAppearance.LightText);
+        }
+
+        return new LinearGradientBrush(
+            ToColor(NoteAppearance.DarkText),
+            ToColor(NoteAppearance.LightText),
+            new System.Windows.Point(0, 0),
+            new System.Windows.Point(1, 1));
     }
 
     private System.Windows.Controls.Button CreateHeadingFlyoutButton(string resourceKey, string style, double fontSize, FontWeight fontWeight)
@@ -754,7 +908,49 @@ public partial class NoteWindow : Window
         }
         finally
         {
+            ApplyTextColorToDocument(save: false);
             _isLoadingEditor = false;
+        }
+    }
+
+    private void ApplyTextColorToDocument(bool save = true)
+    {
+        var textBrush = ToBrush(ViewModel.TextForegroundHex);
+        var linkBrush = ToBrush(ViewModel.LinkForegroundHex);
+        Editor.Document.Foreground = textBrush;
+
+        foreach (var element in FindLogicalTextElements(Editor.Document))
+        {
+            if (element is Hyperlink)
+            {
+                element.Foreground = linkBrush;
+            }
+            else
+            {
+                element.ClearValue(TextElement.ForegroundProperty);
+            }
+        }
+
+        if (save && !_isLoadingEditor)
+        {
+            SaveEditorContent();
+        }
+    }
+
+    private static IEnumerable<TextElement> FindLogicalTextElements(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent))
+        {
+            if (child is not TextElement textElement)
+            {
+                continue;
+            }
+
+            yield return textElement;
+            foreach (var descendant in FindLogicalTextElements(textElement))
+            {
+                yield return descendant;
+            }
         }
     }
 
@@ -1201,7 +1397,7 @@ public partial class NoteWindow : Window
         var hyperlink = new Hyperlink(new Run(displayText), insertionPosition)
         {
             NavigateUri = uri,
-            Foreground = System.Windows.Media.Brushes.Blue,
+            Foreground = ToBrush(ViewModel.LinkForegroundHex),
             TextDecorations = TextDecorations.Underline
         };
 
@@ -1304,6 +1500,11 @@ public partial class NoteWindow : Window
     private static System.Windows.Media.Brush ToBrush(string hex)
     {
         return (System.Windows.Media.Brush)(new BrushConverter().ConvertFromString(hex) ?? System.Windows.Media.Brushes.Transparent);
+    }
+
+    private static System.Windows.Media.Color ToColor(string hex)
+    {
+        return (System.Windows.Media.Color)(System.Windows.Media.ColorConverter.ConvertFromString(hex) ?? System.Windows.Media.Colors.Transparent);
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)

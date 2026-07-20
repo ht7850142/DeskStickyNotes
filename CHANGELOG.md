@@ -8,6 +8,12 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 - Add automated UI smoke tests if the project grows beyond manual verification.
 
+## [0.3.0] - 2026-07-20
+
+- Added per-note background opacity from 30% to 100% without fading text, controls, or images.
+- Added Auto, Dark, and Light note text color modes with contrast-aware link colors.
+- Preserved the existing opaque appearance for notes created by earlier versions.
+
 ## [0.2.9] - 2026-07-16
 
 - Fixed maximized notes so dragging the title bar restores the previous window size.

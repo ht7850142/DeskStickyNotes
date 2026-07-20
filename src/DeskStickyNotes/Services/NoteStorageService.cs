@@ -108,6 +108,8 @@ public sealed class NoteStorageService
         note.X = double.IsFinite(note.X) ? note.X : 100;
         note.Y = double.IsFinite(note.Y) ? note.Y : 100;
         note.Color = NotePalette.Normalize(note.Color);
+        note.BackgroundOpacity = NoteAppearance.NormalizeOpacity(note.BackgroundOpacity);
+        note.TextColorMode = NoteTextColorMode.Normalize(note.TextColorMode);
         note.UpdatedAt = note.UpdatedAt == default ? DateTimeOffset.UtcNow : note.UpdatedAt;
         return note;
     }

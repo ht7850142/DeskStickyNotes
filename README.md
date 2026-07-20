@@ -29,7 +29,7 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 - **Collapsed icon mode**: keep a topmost note available without letting a full note window cover your work area.
 - **Tray-managed, taskbar-clean workflow**: normal note windows stay out of the taskbar, while the tray menu handles note creation, visibility, settings, and exit.
 - **Local-first and private**: notes are saved as local JSON files under `%AppData%`; there is no account, sync, analytics, or network feature.
-- **Small but practical editor**: rich text, todo items, headings, alignment, hyperlinks, colors, and a clean Windows-friendly UI.
+- **Small but practical editor**: rich text, todo items, headings, alignment, hyperlinks, colors, adjustable note transparency, and a clean Windows-friendly UI.
 - **Portable or installed**: users can choose a small framework-dependent package or a runtime/self-contained package.
 - **Open-source and AI-assisted**: the codebase is readable, documented, and includes the original development prompt.
 
@@ -49,7 +49,8 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 - No taskbar button for normal note windows
 - System tray menu: New Note, Show All Notes, Hide All Notes, Settings, Exit
 - Double-click tray icon to show existing notes
-- Auto-save note content, position, size, color, visibility, and topmost state
+- Auto-save note content, position, size, color, transparency, text color, visibility, and topmost state
+- Per-note background opacity with Auto, Dark, and Light text color modes
 - Rich text editing: bold, italic, underline, strikethrough, bullets, numbering, todo items, headings, alignment, and hyperlinks
 - Restore notes on startup
 - Per-note always-on-top
@@ -141,10 +142,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Current package names:
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.2.9-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.2.9-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.2.9-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.2.9-runtime.exe
+artifacts\installer\DeskStickyNotes-portable-0.3.0-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.3.0-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.3.0-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.3.0-runtime.exe
 ```
 
 To build the runtime installer, place the Microsoft runtime installer at the repository root:

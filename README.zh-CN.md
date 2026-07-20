@@ -29,7 +29,7 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 - **折叠成小图标**：置顶便签不想占空间时，可以折叠成可拖动小图标，需要时再展开。
 - **托盘管理，不占任务栏**：普通便签窗口不显示任务栏按钮，通过系统托盘新建、显示、隐藏、设置和退出。
 - **本地优先，更私密**：便签以 JSON 保存在 `%AppData%`，没有账号、同步、广告、遥测或网络功能。
-- **小而够用的富文本**：支持加粗、斜体、下划线、删除线、待办、标题、对齐、超链接和颜色。
+- **小而够用的富文本**：支持加粗、斜体、下划线、删除线、待办、标题、对齐、超链接、颜色和单便签透明度。
 - **安装包和绿色版都支持**：可选择小体积 framework-dependent 包，也可选择自包含/内置运行时包。
 - **开源且 AI 辅助开发**：代码结构清楚，文档完整，并保留原始开发提示词。
 
@@ -49,7 +49,8 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 - 普通便签不显示任务栏按钮
 - 系统托盘菜单：新建、显示全部、隐藏全部、设置、退出
 - 双击托盘图标显示已有便签
-- 自动保存内容、位置、大小、颜色、显示状态和置顶状态
+- 自动保存内容、位置、大小、颜色、透明度、文字颜色、显示状态和置顶状态
+- 单个便签可调整背景透明度，并支持自动、深色和浅色文字
 - 富文本：加粗、斜体、下划线、删除线、列表、待办、标题、对齐、超链接
 - 启动时恢复便签
 - 单个便签可置顶
@@ -125,10 +126,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 当前输出：
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.2.9-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.2.9-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.2.9-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.2.9-runtime.exe
+artifacts\installer\DeskStickyNotes-portable-0.3.0-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.3.0-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.3.0-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.3.0-runtime.exe
 ```
 
 如果要生成内置运行时的安装包，需要把运行时安装器放在仓库根目录：

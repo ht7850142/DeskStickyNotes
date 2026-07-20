@@ -16,7 +16,7 @@ $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $project = Join-Path $root "src\DeskStickyNotes\DeskStickyNotes.csproj"
 $installerDir = Join-Path $root "artifacts\installer"
 $installerScript = Join-Path $root "installer\DeskStickyNotes.iss"
-$appVersion = "0.2.9"
+$appVersion = "0.3.0"
 
 function Resolve-DotNet {
     $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue

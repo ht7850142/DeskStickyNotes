@@ -12,6 +12,8 @@ public sealed class NoteViewModel : ObservableObject
     {
         _model = model;
         _model.Color = NotePalette.Normalize(_model.Color);
+        _model.BackgroundOpacity = NoteAppearance.NormalizeOpacity(_model.BackgroundOpacity);
+        _model.TextColorMode = NoteTextColorMode.Normalize(_model.TextColorMode);
         _fontSize = fontSize;
 
         ToggleTopmostCommand = new RelayCommand(() => Topmost = !Topmost);
@@ -163,6 +165,47 @@ public sealed class NoteViewModel : ObservableObject
             OnPropertyChanged(nameof(HeaderHex));
             OnPropertyChanged(nameof(BorderHex));
             OnPropertyChanged(nameof(SwatchHex));
+            OnPropertyChanged(nameof(TextForegroundHex));
+            OnPropertyChanged(nameof(LinkForegroundHex));
+        }
+    }
+
+    public double BackgroundOpacity
+    {
+        get => _model.BackgroundOpacity;
+        set
+        {
+            var normalized = NoteAppearance.NormalizeOpacity(value);
+            if (Math.Abs(_model.BackgroundOpacity - normalized) < 0.001)
+            {
+                return;
+            }
+
+            _model.BackgroundOpacity = normalized;
+            Touch();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(BackgroundHex));
+            OnPropertyChanged(nameof(HeaderHex));
+            OnPropertyChanged(nameof(BorderHex));
+        }
+    }
+
+    public string TextColorMode
+    {
+        get => _model.TextColorMode;
+        set
+        {
+            var normalized = NoteTextColorMode.Normalize(value);
+            if (_model.TextColorMode == normalized)
+            {
+                return;
+            }
+
+            _model.TextColorMode = normalized;
+            Touch();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TextForegroundHex));
+            OnPropertyChanged(nameof(LinkForegroundHex));
         }
     }
 
@@ -206,13 +249,27 @@ public sealed class NoteViewModel : ObservableObject
         set => SetProperty(ref _fontSize, value);
     }
 
-    public string BackgroundHex => NotePalette.Get(Color).Background;
+    public string BackgroundHex => NoteAppearance.WithOpacity(
+        NotePalette.Get(Color).Background,
+        BackgroundOpacity);
 
-    public string HeaderHex => NotePalette.Get(Color).Header;
+    public string HeaderHex => NoteAppearance.WithOpacity(
+        NotePalette.Get(Color).Header,
+        Math.Clamp(BackgroundOpacity + 0.18, 0.72, 1));
 
-    public string BorderHex => NotePalette.Get(Color).Border;
+    public string BorderHex => NoteAppearance.WithOpacity(
+        NotePalette.Get(Color).Border,
+        Math.Clamp(BackgroundOpacity + 0.22, 0.58, 1));
 
     public string SwatchHex => NotePalette.Get(Color).Swatch;
+
+    public string TextForegroundHex => NoteAppearance.ResolveTextColor(
+        TextColorMode,
+        NotePalette.Get(Color).Background);
+
+    public string LinkForegroundHex => NoteAppearance.ResolveLinkColor(
+        TextColorMode,
+        NotePalette.Get(Color).Background);
 
     public string TopmostLabel => Topmost ? "Unpin" : "Pin";
 
