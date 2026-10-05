@@ -22,6 +22,8 @@ public static class LocalizationService
 
     public static string ActiveCultureName { get; private set; } = English;
 
+    public static event EventHandler? LanguageChanged;
+
     public static string NormalizeLanguage(string? language)
     {
         return AvailableLanguages.Any(option =>
@@ -60,6 +62,7 @@ public static class LocalizationService
         {
             Source = new Uri($"Localization/Strings.{ActiveCultureName}.xaml", UriKind.Relative)
         });
+        LanguageChanged?.Invoke(null, EventArgs.Empty);
     }
 
     public static string Get(string key)

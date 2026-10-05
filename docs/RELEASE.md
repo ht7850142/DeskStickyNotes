@@ -29,15 +29,23 @@ If `dotnet` is not on `Path`, run:
 & 'C:\Program Files\dotnet\dotnet.exe' build -c Release
 ```
 
+Run the window geometry and persistence regression checks before packaging:
+
+```powershell
+dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release
+```
+
+These checks use temporary storage and do not read or write real notes.
+
 ## 3. Prepare Runtime Installer
 
 The runtime-bundled installer expects this file at the repository root:
 
 ```text
-windowsdesktop-runtime-8.0.28-win-x64.exe
+windowsdesktop-runtime-8.0.31-win-x64.exe
 ```
 
-Do not commit it. It is ignored by `.gitignore`.
+The packaging script downloads a missing installer from Microsoft's release metadata and verifies its SHA-512 hash. Do not commit it. It is ignored by `.gitignore`.
 
 ## 4. Build Packages
 
@@ -58,6 +66,7 @@ artifacts\installer\DeskStickyNotes-portable-<version>-win-x64-fd.zip
 artifacts\installer\DeskStickyNotes-portable-<version>-win-x64-runtime.zip
 artifacts\installer\DeskStickyNotesSetup-<version>-fd.exe
 artifacts\installer\DeskStickyNotesSetup-<version>-runtime.exe
+artifacts\installer\DeskStickyNotes-<version>-SHA256SUMS.txt
 ```
 
 Public packages should not contain `.pdb` debug symbol files.
@@ -76,6 +85,14 @@ Manually verify:
 - startup toggle writes/removes the Run registry value
 - installer can install over the previous version
 - portable package starts from an extracted folder
+- all eight resize handles work at compact and expanded sizes
+- empty notes keep manually selected sizes after restarting
+- icons at each screen edge expand inside the work area and stay anchored when collapsed again
+- compact toolbar wraps without losing editing tools
+- moving between monitors and changing DPI or resolution keeps notes reachable
+- note names save independently, update captions/icon tooltips, and survive restarts
+- tray note list refreshes names and permits independent Show/Hide actions, with hidden state saved across restarts
+- imported text slices still preview after their source files are deleted
 
 ## 6. Publish
 
@@ -84,6 +101,9 @@ Create a GitHub Release with:
 - short summary
 - known limitations
 - all four release artifacts
+- SHA-256 checksum manifest
 - changelog section for the version
 
 Mention that `-fd` packages require the .NET 8 Desktop Runtime and `runtime` packages do not.
+
+Commit and push the source first, then create a draft release targeting that exact commit. Upload and verify all five assets before publishing. Large binaries belong in release assets rather than Git history.

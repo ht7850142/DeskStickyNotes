@@ -40,6 +40,8 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Root"
                                     Background="{TemplateBinding Background}"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="2"
                                     CornerRadius="7"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center"
@@ -51,6 +53,10 @@
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter TargetName="Root" Property="Background" Value="#88FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#EAF2FF" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="#1D4ED8" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.45" />
@@ -142,9 +148,9 @@
             <Style x:Key="EditorToolButtonStyle"
                    TargetType="Button"
                    BasedOn="{StaticResource IconButtonStyle}">
-                <Setter Property="Width" Value="26" />
+                <Setter Property="Width" Value="24" />
                 <Setter Property="Height" Value="25" />
-                <Setter Property="Margin" Value="2,0,0,0" />
+                <Setter Property="Margin" Value="1,0,0,0" />
                 <Setter Property="Foreground" Value="#344054" />
                 <Setter Property="Background" Value="#22FFFFFF" />
                 <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
@@ -178,7 +184,7 @@
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="#1F2937" />
                 <Setter Property="Cursor" Value="Hand" />
-                <Setter Property="Focusable" Value="False" />
+                <Setter Property="Focusable" Value="True" />
                 <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                 <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
                 <Setter Property="FontSize" Value="13" />
@@ -188,6 +194,8 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Root"
                                     Background="{TemplateBinding Background}"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="2"
                                     CornerRadius="6"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -199,6 +207,15 @@
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter TargetName="Root" Property="Background" Value="#99FFFFFF" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="#EAF2FF" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="#1D4ED8" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="#98A2B3" />
+                                    <Setter Property="Opacity" Value="0.5" />
+                                    <Setter Property="Cursor" Value="Arrow" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

@@ -31,3 +31,4 @@ appsettings.*.json
 
 # Local packaging dependency
 windowsdesktop-runtime-*.exe
+windowsdesktop-runtime-*.exe.download

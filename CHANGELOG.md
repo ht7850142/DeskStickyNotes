@@ -6,7 +6,23 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
-- Add automated UI smoke tests if the project grows beyond manual verification.
+## [0.4.0] - 2026-10-05
+
+- Fixed note resizing with drag handles on all four edges and corners, including transparent borderless windows.
+- Preserve manually resized notes, including empty notes, when saving and restarting.
+- Keep notes inside the current monitor's work area when expanding a collapsed icon, including high-DPI displays.
+- Added compact text slices that preserve full pasted text behind a clickable preview.
+- Added drag-and-drop, clipboard-file paste, and file-picker import for common text, Markdown, data, log, and source-code files.
+- Text files are imported as local snapshots with encoding, binary-content, per-file, and per-note size safeguards.
+- Added independent note names with title-bar/icon context menus and an F2 shortcut; names persist across restarts.
+- Added a tray note list with live names, visible/hidden indicators, and per-note Show/Hide actions.
+- Added compact 300 × 180 minimum sizing with a wrapping toolbar that keeps editing tools accessible.
+- Keep edge icons anchored through repeated expansion and collapse.
+- Fit restored notes to the work area at startup and after display or DPI changes.
+- Added Enter/Space restoration for collapsed notes and Escape dismissal for editor flyouts.
+- Removed forced synchronous layout on every resize movement.
+- Added Windows regression checks for sizing, names, persistence, compact layouts, text encodings, and snapshots.
+- Updated runtime packages to .NET Desktop Runtime 8.0.31 with verified downloads and SHA-256 release checksums.
 
 ## [0.3.0] - 2026-07-20
 

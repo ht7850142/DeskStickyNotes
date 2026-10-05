@@ -29,7 +29,7 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 - **Collapsed icon mode**: keep a topmost note available without letting a full note window cover your work area.
 - **Tray-managed, taskbar-clean workflow**: normal note windows stay out of the taskbar, while the tray menu handles note creation, visibility, settings, and exit.
 - **Local-first and private**: notes are saved as local JSON files under `%AppData%`; there is no account, sync, analytics, or network feature.
-- **Small but practical editor**: rich text, todo items, headings, alignment, hyperlinks, colors, adjustable note transparency, and a clean Windows-friendly UI.
+- **Small but practical editor**: rich text, todo items, headings, alignment, hyperlinks, compact text slices, colors, adjustable note transparency, and a clean Windows-friendly UI.
 - **Portable or installed**: users can choose a small framework-dependent package or a runtime/self-contained package.
 - **Open-source and AI-assisted**: the codebase is readable, documented, and includes the original development prompt.
 
@@ -46,24 +46,40 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 ## Features
 
 - Multiple independent sticky-note windows
+- Rename each note from its title-bar/icon context menu or with F2; names are saved automatically
+- Right-click the tray icon to browse all notes by name and show or hide each note independently
 - No taskbar button for normal note windows
 - System tray menu: New Note, Show All Notes, Hide All Notes, Settings, Exit
 - Double-click tray icon to show existing notes
 - Auto-save note content, position, size, color, transparency, text color, visibility, and topmost state
 - Per-note background opacity with Auto, Dark, and Light text color modes
 - Rich text editing: bold, italic, underline, strikethrough, bullets, numbering, todo items, headings, alignment, and hyperlinks
+- Turn selected or clipboard text into a compact slice that opens in a full-text preview
+- Drag, paste, or choose common text, Markdown, JSON, CSV, log, and source-code files to import them as slices
+- Imported text files are local snapshots, so their previews keep working if the originals move or are deleted
 - Restore notes on startup
 - Per-note always-on-top
 - Collapse a note into a small draggable icon
+- Resize notes by dragging any edge or corner; custom sizes are saved even for empty notes
+- Compact notes down to 300 × 180 with a wrapping toolbar; restore collapsed notes with Enter or Space
+- Expanding an icon near a screen edge keeps the note inside that monitor's available work area
 - Optional "Keep after Win+D" best-effort behavior
 - Light Windows 11-friendly note and settings UI
 - Simplified Chinese and English UI, plus Auto language detection
 - Start with Windows through `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 - Local JSON storage under `%AppData%\DeskStickyNotes`
 
+### Text slices
+
+- Select text in a note and use the document button in the editor toolbar to tuck it into a slice.
+- Copy a long passage and choose **Paste clipboard as a text slice**, or press `Ctrl+Shift+V`.
+- Drop text files onto the note editor, or choose files from the slice menu, to create clickable file slices.
+- Click a slice to read, scroll, wrap, or copy the full text in a separate preview window.
+- Each text slice is limited to 2 MB, with an 8 MB text-slice limit per note.
+
 ## Download
 
-For end users, use the files from GitHub Releases.
+For end users, download [DeskStickyNotes 0.4.0 from GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.4.0).
 
 | Package | Use when |
 | --- | --- |
@@ -142,16 +158,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Current package names:
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.3.0-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.3.0-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.3.0-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.3.0-runtime.exe
+artifacts\installer\DeskStickyNotes-portable-0.4.0-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.4.0-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.4.0-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.4.0-runtime.exe
+artifacts\installer\DeskStickyNotes-0.4.0-SHA256SUMS.txt
 ```
 
-To build the runtime installer, place the Microsoft runtime installer at the repository root:
+The packaging script downloads and verifies the Microsoft runtime installer automatically when it is missing:
 
 ```text
-windowsdesktop-runtime-8.0.28-win-x64.exe
+windowsdesktop-runtime-8.0.31-win-x64.exe
 ```
 
 This file is ignored by Git because it is a local packaging dependency.

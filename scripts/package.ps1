@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
+    [ValidateSet("win-x64")]
     [string]$Runtime = "win-x64",
     [switch]$SelfContained,
     [switch]$IncludeRuntime,
@@ -12,11 +13,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$root = Resolve-Path (Join-Path $PSScriptRoot "..")
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $project = Join-Path $root "src\DeskStickyNotes\DeskStickyNotes.csproj"
 $installerDir = Join-Path $root "artifacts\installer"
 $installerScript = Join-Path $root "installer\DeskStickyNotes.iss"
-$appVersion = "0.3.0"
+$publishRoot = [IO.Path]::GetFullPath((Join-Path $root "artifacts\publish"))
+[xml]$projectMetadata = Get-Content -LiteralPath $project -Raw
+$appVersion = @($projectMetadata.Project.PropertyGroup.Version | Where-Object { $_ })[0]
+if ($appVersion -notmatch '^\d+\.\d+\.\d+$') {
+    throw "Invalid release version in $project"
+}
+$runtimeVersion = "8.0.31"
 
 function Resolve-DotNet {
     $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
@@ -54,26 +61,52 @@ function Resolve-InnoSetup {
 }
 
 function Resolve-RuntimeInstaller([string]$RequestedPath) {
-    if ($RequestedPath) {
-        if (-not (Test-Path -LiteralPath $RequestedPath)) {
-            throw "Runtime installer was not found: $RequestedPath"
+    $installerPath = if ($RequestedPath) { [IO.Path]::GetFullPath($RequestedPath) } else {
+        Join-Path $root "windowsdesktop-runtime-$runtimeVersion-$Runtime.exe"
+    }
+
+    $metadata = Invoke-RestMethod -Uri "https://builds.dotnet.microsoft.com/dotnet/release-metadata/8.0/releases.json"
+    $release = $metadata.releases | Where-Object { $_.windowsdesktop.version -eq $runtimeVersion } | Select-Object -First 1
+    $runtimeFile = $release.windowsdesktop.files | Where-Object { $_.rid -eq $Runtime -and $_.name -like "*.exe" } | Select-Object -First 1
+    if (-not $runtimeFile -or $runtimeFile.url -notlike 'https://builds.dotnet.microsoft.com/*') {
+        throw "The official .NET $runtimeVersion installer could not be resolved."
+    }
+
+    if (-not (Test-Path -LiteralPath $installerPath)) {
+        if ($RequestedPath) { throw "Runtime installer was not found: $installerPath" }
+        Write-Host "Downloading Microsoft .NET Desktop Runtime $runtimeVersion..."
+        $downloadPath = "$installerPath.download"
+        Invoke-WebRequest -Uri $runtimeFile.url -OutFile $downloadPath -UseBasicParsing
+        if ((Get-FileHash -LiteralPath $downloadPath -Algorithm SHA512).Hash -ne $runtimeFile.hash) {
+            Remove-Item -LiteralPath $downloadPath -Force
+            throw "The downloaded runtime installer failed SHA-512 verification."
         }
-
-        return (Resolve-Path -LiteralPath $RequestedPath).Path
+        Move-Item -LiteralPath $downloadPath -Destination $installerPath -Force
     }
 
-    $defaultPath = Join-Path $root "windowsdesktop-runtime-8.0.28-win-x64.exe"
-    if (-not (Test-Path -LiteralPath $defaultPath)) {
-        throw "Runtime installer was not found: $defaultPath"
+    if ((Get-FileHash -LiteralPath $installerPath -Algorithm SHA512).Hash -ne $runtimeFile.hash) {
+        throw "Runtime installer does not match Microsoft's .NET $runtimeVersion release hash: $installerPath"
     }
+    Write-Host "Verified Microsoft runtime installer: $installerPath"
+    return $installerPath
+}
 
-    return (Resolve-Path -LiteralPath $defaultPath).Path
+function Assert-PublishDirectory([string]$PublishDir) {
+    $resolvedPath = [IO.Path]::GetFullPath($PublishDir)
+    if (-not $resolvedPath.StartsWith($publishRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Publish directory must be inside $publishRoot`: $resolvedPath"
+    }
+    if ((Test-Path -LiteralPath $resolvedPath) -and
+        ((Get-Item -LiteralPath $resolvedPath).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "Refusing to replace a linked publish directory: $resolvedPath"
+    }
 }
 
 function Publish-App(
     [string]$PublishDir,
     [bool]$PublishSelfContained
 ) {
+    Assert-PublishDirectory $PublishDir
     if (Test-Path -LiteralPath $PublishDir) {
         Remove-Item -LiteralPath $PublishDir -Recurse -Force
     }
@@ -95,6 +128,7 @@ function Publish-App(
 
     if ($PublishSelfContained) {
         $publishArgs += "-p:EnableCompressionInSingleFile=true"
+        $publishArgs += "-p:RuntimeFrameworkVersion=$runtimeVersion"
     }
 
     if ($NoRestore) {
@@ -106,8 +140,9 @@ function Publish-App(
         throw "dotnet publish failed with exit code $LASTEXITCODE"
     }
 
-    Get-ChildItem -LiteralPath $PublishDir -Filter "*.pdb" -Recurse -File -ErrorAction SilentlyContinue |
-        Remove-Item -Force
+    foreach ($symbol in Get-ChildItem -LiteralPath $PublishDir -Filter "*.pdb" -Recurse -File -ErrorAction SilentlyContinue) {
+        Remove-Item -LiteralPath $symbol.FullName -Force
+    }
 
     Write-Host "Published to $PublishDir"
 }
@@ -137,14 +172,15 @@ function Invoke-Inno(
 
     $iscc = Resolve-InnoSetup
     if (-not $iscc) {
-        Write-Warning "Inno Setup compiler was not found. Install it with: winget install JRSoftware.InnoSetup"
-        return
+        throw "Inno Setup compiler was not found. Install it with: winget install JRSoftware.InnoSetup"
     }
 
     $isccArgs = @(
         "/DSourceDir=$PublishDir",
         "/DOutputDir=$installerDir",
         "/DPackageSuffix=$PackageSuffix"
+        "/DMyAppVersion=$appVersion"
+        "/DRuntimeVersion=$runtimeVersion"
     )
 
     if ($BundleRuntime) {
@@ -166,6 +202,10 @@ function New-SelfContainedPortableZip(
     New-PortableZip -PublishDir $portableRuntimePublishDir -Name $Name
 }
 
+if (-not $SkipInstaller -and -not (Resolve-InnoSetup)) {
+    throw "Inno Setup compiler was not found. Install it with: winget install JRSoftware.InnoSetup"
+}
+
 if ($AllInstallers) {
     $runtimeInstallerPath = Resolve-RuntimeInstaller $RuntimeInstaller
 
@@ -176,6 +216,22 @@ if ($AllInstallers) {
     Invoke-Inno -PublishDir $smallPublishDir -PackageSuffix "-runtime" -BundleRuntime $true -RuntimeInstallerPath $runtimeInstallerPath
 
     New-SelfContainedPortableZip -Name "DeskStickyNotes-portable-$appVersion-$Runtime-runtime.zip"
+
+    if (-not $SkipInstaller) {
+        $releaseNames = @(
+            "DeskStickyNotes-portable-$appVersion-$Runtime-fd.zip",
+            "DeskStickyNotes-portable-$appVersion-$Runtime-runtime.zip",
+            "DeskStickyNotesSetup-$appVersion-fd.exe",
+            "DeskStickyNotesSetup-$appVersion-runtime.exe"
+        )
+        $checksums = foreach ($name in $releaseNames) {
+            $releasePath = Join-Path $installerDir $name
+            if (-not (Test-Path -LiteralPath $releasePath -PathType Leaf)) { throw "Missing release artifact: $releasePath" }
+            $hash = (Get-FileHash -LiteralPath $releasePath -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $name"
+        }
+        $checksums | Set-Content -LiteralPath (Join-Path $installerDir "DeskStickyNotes-$appVersion-SHA256SUMS.txt") -Encoding ASCII
+    }
 }
 else {
     $bundleRuntime = [bool]$IncludeRuntime

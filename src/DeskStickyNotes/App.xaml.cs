@@ -50,7 +50,9 @@ public partial class App : System.Windows.Application
             () => Dispatcher.Invoke(ShowAllNotes),
             () => Dispatcher.Invoke(HideAllNotes),
             () => Dispatcher.Invoke(ShowSettingsWindow),
-            () => Dispatcher.Invoke(ExitApplication));
+            () => Dispatcher.Invoke(ExitApplication),
+            () => Dispatcher.Invoke(GetTrayNotes),
+            (id, visible) => Dispatcher.Invoke(() => SetNoteVisibility(id, visible)));
         _trayService.Show();
 
         StartAutoSaveTimer();
@@ -170,6 +172,29 @@ public partial class App : System.Windows.Application
         SaveAll();
     }
 
+    private IReadOnlyList<TrayNote> GetTrayNotes()
+    {
+        return _notes.Select(note => new TrayNote(note.Id, note.Title,
+            note.Visible && _noteWindows.TryGetValue(note.Id, out var window)
+                && window.IsVisible && window.WindowState != WindowState.Minimized)).ToList();
+    }
+
+    private void SetNoteVisibility(Guid id, bool visible)
+    {
+        var note = _notes.FirstOrDefault(item => item.Id == id);
+        if (note is null) return;
+        if (visible)
+        {
+            ShowNoteWindow(note, activate: true);
+        }
+        else
+        {
+            note.Visible = false;
+            if (_noteWindows.TryGetValue(id, out var window)) window.HideFromDesktop();
+        }
+        SaveAll();
+    }
+
     private void ShowNoteWindow(NoteViewModel note, bool activate)
     {
         if (!_noteWindows.TryGetValue(note.Id, out var window))
@@ -243,7 +268,7 @@ public partial class App : System.Windows.Application
 
     private static bool IsEmptyNote(NoteViewModel note)
     {
-        return string.IsNullOrWhiteSpace(note.TextContent);
+        return !note.HasContent;
     }
 
     private void ShowSettingsWindow()

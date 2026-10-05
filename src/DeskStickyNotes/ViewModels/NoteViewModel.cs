@@ -11,6 +11,8 @@ public sealed class NoteViewModel : ObservableObject
     public NoteViewModel(NoteModel model, double fontSize)
     {
         _model = model;
+        _model.Title = NoteModel.NormalizeTitle(_model.Title);
+        _model.TextClips ??= [];
         _model.Color = NotePalette.Normalize(_model.Color);
         _model.BackgroundOpacity = NoteAppearance.NormalizeOpacity(_model.BackgroundOpacity);
         _model.TextColorMode = NoteTextColorMode.Normalize(_model.TextColorMode);
@@ -37,6 +39,19 @@ public sealed class NoteViewModel : ObservableObject
     public event EventHandler? DeleteRequested;
 
     public Guid Id => _model.Id;
+
+    public string Title
+    {
+        get => _model.Title;
+        set
+        {
+            var normalized = NoteModel.NormalizeTitle(value);
+            if (_model.Title == normalized) return;
+            _model.Title = normalized;
+            Touch();
+            OnPropertyChanged();
+        }
+    }
 
     public IReadOnlyList<string> AvailableColors => NotePalette.Names;
 
@@ -72,6 +87,41 @@ public sealed class NoteViewModel : ObservableObject
         }
     }
 
+    public IReadOnlyList<TextClipModel> TextClips => _model.TextClips;
+
+    public bool HasContent => !string.IsNullOrWhiteSpace(TextContent) || _model.TextClips.Count > 0;
+
+    public void AddTextClip(TextClipModel clip)
+    {
+        ArgumentNullException.ThrowIfNull(clip);
+
+        _model.TextClips.Add(clip);
+        Touch();
+        OnPropertyChanged(nameof(TextClips));
+        OnPropertyChanged(nameof(HasContent));
+    }
+
+    public bool TryGetTextClip(Guid id, out TextClipModel? clip)
+    {
+        clip = _model.TextClips.FirstOrDefault(item => item.Id == id);
+        return clip is not null;
+    }
+
+    public bool RemoveTextClip(Guid id)
+    {
+        var clip = _model.TextClips.FirstOrDefault(item => item.Id == id);
+        if (clip is null)
+        {
+            return false;
+        }
+
+        _model.TextClips.Remove(clip);
+        Touch();
+        OnPropertyChanged(nameof(TextClips));
+        OnPropertyChanged(nameof(HasContent));
+        return true;
+    }
+
     public void UpdateContent(string plainText, string richContent)
     {
         _model.TextContent = plainText;
@@ -79,6 +129,7 @@ public sealed class NoteViewModel : ObservableObject
         Touch();
         OnPropertyChanged(nameof(TextContent));
         OnPropertyChanged(nameof(RichContent));
+        OnPropertyChanged(nameof(HasContent));
     }
 
     public double X
@@ -319,7 +370,7 @@ public sealed class NoteViewModel : ObservableObject
     private double NormalizeWidth(double value)
     {
         return double.IsFinite(value)
-            ? Math.Clamp(value, NoteModel.MinWidth, 1200)
+            ? Math.Max(value, NoteModel.MinWidth)
             : NoteModel.DefaultWidth;
     }
 
@@ -330,11 +381,6 @@ public sealed class NoteViewModel : ObservableObject
             return NoteModel.DefaultHeight;
         }
 
-        var height = Math.Clamp(value, NoteModel.MinHeight, 900);
-        return IsEmpty && height > NoteModel.EmptyNoteMaxHeight
-            ? NoteModel.DefaultHeight
-            : height;
+        return Math.Max(value, NoteModel.MinHeight);
     }
-
-    private bool IsEmpty => string.IsNullOrWhiteSpace(TextContent);
 }

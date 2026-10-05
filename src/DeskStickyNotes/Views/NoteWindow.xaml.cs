@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Threading;
 using DeskStickyNotes.Models;
+using DeskStickyNotes.Services;
 using DeskStickyNotes.ViewModels;
 
 namespace DeskStickyNotes.Views;
@@ -28,24 +29,19 @@ public partial class NoteWindow : Window
     private const int WmSize = 0x0005;
     private const int WmShowWindow = 0x0018;
     private const int WmWindowPosChanging = 0x0046;
-    private const int WmNcHitTest = 0x0084;
+    private const int WmDisplayChange = 0x007E;
+    private const int WmDpiChanged = 0x02E0;
     private const int ScMinimize = 0xF020;
     private const int SizeMinimized = 1;
-    private const int HtLeft = 10;
-    private const int HtRight = 11;
-    private const int HtTop = 12;
-    private const int HtTopLeft = 13;
-    private const int HtTopRight = 14;
-    private const int HtBottom = 15;
-    private const int HtBottomLeft = 16;
-    private const int HtBottomRight = 17;
     private const int SwShownoactivate = 4;
-    private const int ResizeBorderPixels = 10;
     private const double ImageResizeStep = 1.12;
     private const double ImageMinWidth = 80;
     private const double ImageEditorMargin = 24;
     private const double ImageResizeHitArea = 9;
     private const string XamlPackagePrefix = "xamlpackage;base64,";
+    private const string TextClipUriScheme = "desksticky";
+    private const string TextClipUriHost = "text-clip";
+    private const int MaximumFilesPerImport = 20;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoZOrder = 0x0004;
@@ -59,10 +55,14 @@ public partial class NoteWindow : Window
 
     private HwndSource? _hwndSource;
     private Popup? _openFlyout;
+    private readonly TextFileImportService _textFileImportService = new();
+    private readonly Dictionary<Guid, TextClipPreviewWindow> _textClipPreviewWindows = new();
     private readonly DispatcherTimer _showDesktopRecoveryTimer;
     private bool _allowClose;
     private bool _collapsedIconWasDragged;
     private bool _isIconCollapsed;
+    private bool _isUpdatingWindowBounds;
+    private bool _isApplyingBatchEdit;
     private bool _isLoadingEditor;
     private System.Windows.Controls.Image? _resizingImage;
     private System.Windows.Point _imageResizeStart;
@@ -72,11 +72,20 @@ public partial class NoteWindow : Window
     private bool _isCollapsedIconMouseDown;
     private bool _isTitleMouseDown;
     private bool _isTaskbarMinimized;
+    private Hyperlink? _pressedTextClipLink;
+    private System.Windows.Point _textClipMouseDownPoint;
     private System.Windows.Point _collapsedIconMouseDownPoint;
     private double _expandedMinHeight;
     private double _expandedMinWidth;
     private System.Windows.Point _titleMouseDownPoint;
     private Rect _expandedBounds;
+    private Rect? _lastRestoredBounds;
+    private System.Windows.Point? _lastCollapsedIconPosition;
+    private Thumb? _windowResizeThumb;
+    private Rect _windowResizeStartBounds;
+    private NativePoint _windowResizeStartPoint;
+    private DpiScale _windowResizeDpi;
+    private NoteResizeEdge _windowResizeEdge;
     private ResizeMode _expandedResizeMode;
     private int _showDesktopRecoveryAttempts;
 
@@ -84,9 +93,15 @@ public partial class NoteWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
+        viewModel.PropertyChanged += NoteViewModel_PropertyChanged;
+        UpdateNoteTitle();
         Width = viewModel.Width;
         Height = viewModel.Height;
         Editor.AddHandler(Hyperlink.RequestNavigateEvent, new RequestNavigateEventHandler(Hyperlink_RequestNavigate));
+        Editor.AddHandler(System.Windows.DragDrop.PreviewDragEnterEvent, new System.Windows.DragEventHandler(Editor_PreviewDragEnter), true);
+        Editor.AddHandler(System.Windows.DragDrop.PreviewDragOverEvent, new System.Windows.DragEventHandler(Editor_PreviewDragOver), true);
+        Editor.AddHandler(System.Windows.DragDrop.PreviewDragLeaveEvent, new System.Windows.DragEventHandler(Editor_PreviewDragLeave), true);
+        Editor.AddHandler(System.Windows.DragDrop.PreviewDropEvent, new System.Windows.DragEventHandler(Editor_PreviewDrop), true);
         System.Windows.DataObject.AddPastingHandler(Editor, Editor_Pasting);
         LoadEditorContent();
 
@@ -97,16 +112,23 @@ public partial class NoteWindow : Window
         _showDesktopRecoveryTimer.Tick += ShowDesktopRecoveryTimer_Tick;
 
         SourceInitialized += OnSourceInitialized;
-        Loaded += (_, _) => _showDesktopRecoveryTimer.Start();
+        Loaded += (_, _) =>
+        {
+            FitWindowToCurrentWorkArea();
+            _showDesktopRecoveryTimer.Start();
+        };
         LocationChanged += (_, _) => UpdateGeometry();
         SizeChanged += (_, _) => UpdateGeometry();
         StateChanged += OnStateChanged;
+        LocalizationService.LanguageChanged += LocalizationService_LanguageChanged;
     }
 
     private NoteViewModel ViewModel => (NoteViewModel)DataContext;
 
     public void CloseForApplication()
     {
+        SaveEditorContent();
+        PruneDetachedTextClips();
         _allowClose = true;
         Close();
     }
@@ -123,6 +145,7 @@ public partial class NoteWindow : Window
 
     public void HideFromDesktop()
     {
+        CloseTextClipPreviews();
         _isTaskbarMinimized = false;
         WindowState = WindowState.Normal;
         ShowInTaskbar = false;
@@ -145,9 +168,42 @@ public partial class NoteWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         CloseOpenFlyout();
+        TextFileDropOverlay.Visibility = Visibility.Collapsed;
+        CloseTextClipPreviews();
         _showDesktopRecoveryTimer.Stop();
+        LocalizationService.LanguageChanged -= LocalizationService_LanguageChanged;
+        ViewModel.PropertyChanged -= NoteViewModel_PropertyChanged;
         _hwndSource?.RemoveHook(WndProc);
         base.OnClosed(e);
+    }
+
+    private void LocalizationService_LanguageChanged(object? sender, EventArgs e)
+    {
+        UpdateNoteTitle();
+        ConfigureTextClipLinksInDocument();
+    }
+
+    private void NoteViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NoteViewModel.Title)) UpdateNoteTitle();
+    }
+
+    private void UpdateNoteTitle()
+    {
+        var title = string.IsNullOrEmpty(ViewModel.Title) ? LocalizationService.Get("NoteTitle") : ViewModel.Title;
+        NoteTitleText.Text = title;
+        NoteTitleText.ToolTip = $"{title}\n{LocalizationService.Get("RenameNoteHint")}";
+        Title = $"{title} — {LocalizationService.Get("AppName")}";
+        CollapsedIconContent.ToolTip = $"{title}\n{LocalizationService.Get("TipRestoreNote")}";
+    }
+
+    private void RenameNote_Click(object sender, RoutedEventArgs e) => RenameNote();
+
+    private void RenameNote()
+    {
+        CloseOpenFlyout();
+        var dialog = new RenameNoteWindow(ViewModel.Title) { Owner = this };
+        if (dialog.ShowDialog() == true) ViewModel.Title = dialog.NoteTitle;
     }
 
     private void DragBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -318,6 +374,12 @@ public partial class NoteWindow : Window
         SaveEditorContent();
 
         _expandedBounds = GetNormalWindowBounds();
+        var iconPosition = _lastRestoredBounds is Rect restoredBounds
+            && _lastCollapsedIconPosition is System.Windows.Point savedIconPosition
+            && Math.Abs(_expandedBounds.Left - restoredBounds.Left) < 0.5
+            && Math.Abs(_expandedBounds.Top - restoredBounds.Top) < 0.5
+                ? savedIconPosition
+                : _expandedBounds.TopLeft;
         if (WindowState == WindowState.Maximized)
         {
             WindowState = WindowState.Normal;
@@ -333,6 +395,7 @@ public partial class NoteWindow : Window
         }
 
         _isIconCollapsed = true;
+        WindowResizeHandles.IsHitTestVisible = false;
         SetCollapsedChrome(collapsed: true);
         ExpandedContent.Visibility = Visibility.Collapsed;
         CollapsedIconContent.Visibility = Visibility.Visible;
@@ -341,6 +404,9 @@ public partial class NoteWindow : Window
         MinHeight = CollapsedIconSize;
         Width = CollapsedIconSize;
         Height = CollapsedIconSize;
+        ApplyWindowBounds(NoteWindowGeometry.FitToWorkArea(
+            new Rect(iconPosition, new System.Windows.Size(CollapsedIconSize, CollapsedIconSize)), GetCurrentWorkArea()));
+        CollapsedIconContent.Focus();
         ShowInTaskbar = false;
         ApplyTaskbarVisibility(showInTaskbar: false);
     }
@@ -409,27 +475,141 @@ public partial class NoteWindow : Window
             return;
         }
 
-        _isIconCollapsed = false;
-        SetCollapsedChrome(collapsed: false);
-        MinWidth = _expandedMinWidth > 0 ? _expandedMinWidth : 390;
-        MinHeight = _expandedMinHeight > 0 ? _expandedMinHeight : 210;
+        var workArea = GetCurrentWorkArea();
+        _lastCollapsedIconPosition = new System.Windows.Point(Left, Top);
+        var minimumWidth = _expandedMinWidth > 0 ? _expandedMinWidth : NoteModel.MinWidth;
+        var minimumHeight = _expandedMinHeight > 0 ? _expandedMinHeight : NoteModel.MinHeight;
+        var bounds = NoteWindowGeometry.FitToWorkArea(new Rect(
+            Left,
+            Top,
+            Math.Max(minimumWidth, _expandedBounds.Width),
+            Math.Max(minimumHeight, _expandedBounds.Height)), workArea);
+
+        MinWidth = Math.Min(minimumWidth, workArea.Width);
+        MinHeight = Math.Min(minimumHeight, workArea.Height);
         ResizeMode = _expandedResizeMode;
+        SetCollapsedChrome(collapsed: false);
         CollapsedIconContent.Visibility = Visibility.Collapsed;
         ExpandedContent.Visibility = Visibility.Visible;
-
-        if (double.IsFinite(_expandedBounds.Left))
-        {
-            Left = _expandedBounds.Left;
-        }
-
-        if (double.IsFinite(_expandedBounds.Top))
-        {
-            Top = _expandedBounds.Top;
-        }
-
-        Width = _expandedBounds.Width >= MinWidth ? _expandedBounds.Width : MinWidth;
-        Height = _expandedBounds.Height >= MinHeight ? _expandedBounds.Height : MinHeight;
+        ApplyWindowBounds(bounds);
+        _lastRestoredBounds = bounds;
+        _isIconCollapsed = false;
+        WindowResizeHandles.IsHitTestVisible = true;
+        UpdateGeometry();
         Activate();
+    }
+
+    private Rect GetCurrentWorkArea()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var compositionTarget = PresentationSource.FromVisual(this)?.CompositionTarget;
+        if (handle == IntPtr.Zero || compositionTarget is null)
+        {
+            return SystemParameters.WorkArea;
+        }
+
+        var workArea = System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
+        var bounds = new Rect(workArea.Left, workArea.Top, workArea.Width, workArea.Height);
+        bounds.Transform(compositionTarget.TransformFromDevice);
+        return bounds;
+    }
+
+    private void ApplyWindowBounds(Rect bounds)
+    {
+        _isUpdatingWindowBounds = true;
+        try
+        {
+            Left = bounds.Left;
+            Top = bounds.Top;
+            Width = bounds.Width;
+            Height = bounds.Height;
+        }
+        finally
+        {
+            _isUpdatingWindowBounds = false;
+        }
+
+        UpdateGeometry(bounds);
+    }
+
+    private void FitWindowToCurrentWorkArea()
+    {
+        if (WindowState != WindowState.Normal || !IsLoaded)
+        {
+            return;
+        }
+
+        var workArea = GetCurrentWorkArea();
+        MinWidth = Math.Min(_isIconCollapsed ? CollapsedIconSize : NoteModel.MinWidth, workArea.Width);
+        MinHeight = Math.Min(_isIconCollapsed ? CollapsedIconSize : NoteModel.MinHeight, workArea.Height);
+        var currentBounds = GetNormalWindowBounds();
+        var fittedBounds = NoteWindowGeometry.FitToWorkArea(currentBounds, workArea);
+        if (currentBounds != fittedBounds)
+        {
+            ApplyWindowBounds(fittedBounds);
+        }
+    }
+
+    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.F2)
+        {
+            RenameNote();
+            e.Handled = true;
+        }
+        else if (_isIconCollapsed && e.Key is Key.Enter or Key.Space)
+        {
+            RestoreFromIcon();
+            Editor.Focus();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && _openFlyout is not null)
+        {
+            CloseOpenFlyout();
+            e.Handled = true;
+        }
+    }
+
+    private void WindowResizeThumb_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        if (!CanResizeFromWindowEdges()
+            || sender is not Thumb thumb
+            || !Enum.TryParse(thumb.Tag as string, out _windowResizeEdge)
+            || !NativeMethods.GetCursorPos(out _windowResizeStartPoint))
+        {
+            (sender as Thumb)?.CancelDrag();
+            return;
+        }
+
+        CloseOpenFlyout();
+        _windowResizeStartBounds = GetNormalWindowBounds();
+        _windowResizeDpi = VisualTreeHelper.GetDpi(this);
+        _windowResizeThumb = thumb;
+        e.Handled = true;
+    }
+
+    private void WindowResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _windowResizeThumb)
+            || !CanResizeFromWindowEdges()
+            || !NativeMethods.GetCursorPos(out var point))
+        {
+            return;
+        }
+
+        // Screen coordinates remain stable when resizing from the top or left moves the window.
+        var delta = new Vector(
+            (point.X - _windowResizeStartPoint.X) / _windowResizeDpi.DpiScaleX,
+            (point.Y - _windowResizeStartPoint.Y) / _windowResizeDpi.DpiScaleY);
+        ApplyWindowBounds(NoteWindowGeometry.Resize(
+            _windowResizeStartBounds, _windowResizeEdge, delta, new System.Windows.Size(MinWidth, MinHeight)));
+        e.Handled = true;
+    }
+
+    private void WindowResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _windowResizeThumb = null;
+        e.Handled = true;
     }
 
     private void SaveCollapsedIconPosition()
@@ -581,6 +761,185 @@ public partial class NoteWindow : Window
         SaveEditorContent();
     }
 
+    private void TextClipButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button)
+        {
+            return;
+        }
+
+        var selectedText = new TextRange(Editor.Selection.Start, Editor.Selection.End).Text;
+        var clipboardText = TryGetClipboardText();
+
+        var selectionButton = CreateFlyoutButton(LocalizationService.Get("TextClipMenuSelection"));
+        selectionButton.IsEnabled = !string.IsNullOrWhiteSpace(selectedText);
+        selectionButton.Click += (_, _) =>
+        {
+            CloseOpenFlyout();
+            InsertTextAsClip(selectedText, replaceSelection: true);
+        };
+
+        var clipboardButton = CreateFlyoutButton(LocalizationService.Get("TextClipMenuClipboard"));
+        clipboardButton.IsEnabled = !string.IsNullOrWhiteSpace(clipboardText);
+        clipboardButton.Click += (_, _) =>
+        {
+            CloseOpenFlyout();
+            InsertTextAsClip(clipboardText ?? "", replaceSelection: !Editor.Selection.IsEmpty);
+        };
+
+        var importButton = CreateFlyoutButton(LocalizationService.Get("TextClipMenuImportFile"));
+        importButton.Click += (_, _) =>
+        {
+            CloseOpenFlyout();
+            SelectAndImportTextFiles();
+        };
+
+        ShowFlyout(button, new UIElement[]
+        {
+            selectionButton,
+            clipboardButton,
+            CreateFlyoutSeparator(),
+            importButton
+        }, 224);
+    }
+
+    private void InsertTextAsClip(string content, bool replaceSelection)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        if (replaceSelection && !Editor.Selection.IsEmpty && SelectionIntersectsHyperlink())
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipErrorSelectionContainsLink"));
+            return;
+        }
+
+        var byteLength = Encoding.UTF8.GetByteCount(content);
+        if (byteLength > TextFileImportService.MaximumFileSizeBytes)
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipErrorFileTooLarge"));
+            return;
+        }
+
+        if (!CanStoreTextClip(byteLength))
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipErrorNoteLimit"));
+            return;
+        }
+
+        var clip = new TextClipModel
+        {
+            Id = Guid.NewGuid(),
+            Title = CreateTextClipTitle(content),
+            Content = content,
+            SourceFileName = "",
+            FileExtension = ".txt",
+            OriginalByteLength = byteLength,
+            ImportedAt = DateTimeOffset.UtcNow
+        };
+
+        Editor.Focus();
+        var removedSelection = replaceSelection && !Editor.Selection.IsEmpty;
+        var inserted = false;
+        _isApplyingBatchEdit = true;
+        Editor.BeginChange();
+        try
+        {
+            if (removedSelection)
+            {
+                Editor.Selection.Text = string.Empty;
+            }
+
+            inserted = TryInsertTextClipLink(clip);
+            if (inserted)
+            {
+                ViewModel.AddTextClip(clip);
+            }
+        }
+        finally
+        {
+            Editor.EndChange();
+            if (!inserted && removedSelection && Editor.CanUndo)
+            {
+                Editor.Undo();
+            }
+
+            _isApplyingBatchEdit = false;
+        }
+
+        if (!inserted)
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipErrorInsertFailed"));
+            return;
+        }
+
+        SaveEditorContent();
+    }
+
+    private async void SelectAndImportTextFiles()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = LocalizationService.Get("TextClipImportDialogTitle"),
+            Filter = CreateTextFileDialogFilter(),
+            Multiselect = true,
+            CheckFileExists = true,
+            CheckPathExists = true
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            await ImportTextFilesAsync(dialog.FileNames);
+        }
+    }
+
+    private static string CreateTextFileDialogFilter()
+    {
+        var extensionPatterns = TextFileImportService.SupportedExtensions
+                .OrderBy(extension => extension, StringComparer.OrdinalIgnoreCase)
+                .Select(extension => $"*{extension}");
+        var namedFilePatterns = TextFileImportService.SupportedFileNames
+            .OrderBy(fileName => fileName, StringComparer.OrdinalIgnoreCase);
+        var patterns = string.Join(';', extensionPatterns.Concat(namedFilePatterns));
+        return $"{LocalizationService.Get("TextClipImportFilterName")}|{patterns}|"
+            + $"{LocalizationService.Get("TextClipImportAllFiles")}|*.*";
+    }
+
+    private static string? TryGetClipboardText()
+    {
+        try
+        {
+            return System.Windows.Clipboard.ContainsText(System.Windows.TextDataFormat.UnicodeText)
+                ? System.Windows.Clipboard.GetText(System.Windows.TextDataFormat.UnicodeText)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string CreateTextClipTitle(string content)
+    {
+        using var reader = new StringReader(content);
+        string? line;
+        while ((line = reader.ReadLine()) is not null)
+        {
+            var words = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0)
+            {
+                continue;
+            }
+
+            var title = string.Join(" ", words);
+            return title.Length <= 52 ? title : title[..49] + "…";
+        }
+
+        return LocalizationService.Get("TextClipDefaultTitle");
+    }
+
     private void ShowFlyout(System.Windows.Controls.Button owner, IEnumerable<UIElement> items, double minWidth)
     {
         CloseOpenFlyout();
@@ -588,6 +947,18 @@ public partial class NoteWindow : Window
         var panel = new StackPanel
         {
             MinWidth = minWidth
+        };
+        KeyboardNavigation.SetTabNavigation(panel, KeyboardNavigationMode.Cycle);
+        panel.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape)
+            {
+                return;
+            }
+
+            CloseOpenFlyout();
+            owner.Focus();
+            e.Handled = true;
         };
 
         foreach (var item in items)
@@ -619,6 +990,10 @@ public partial class NoteWindow : Window
                 _openFlyout = null;
             }
         };
+        popup.Opened += (_, _) => panel.Children
+            .OfType<System.Windows.Controls.Button>()
+            .FirstOrDefault(item => item.IsEnabled)
+            ?.Focus();
 
         _openFlyout = popup;
         popup.IsOpen = true;
@@ -864,14 +1239,333 @@ public partial class NoteWindow : Window
 
     private void Editor_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (!_isLoadingEditor)
+        if (!_isLoadingEditor && !_isApplyingBatchEdit)
         {
             SaveEditorContent();
         }
     }
 
-    private void Editor_Pasting(object sender, DataObjectPastingEventArgs e)
+    private void Editor_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (e.Key == Key.Enter
+            && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control
+            && TryGetTextClipAtPosition(Editor.CaretPosition, out var clipId))
+        {
+            e.Handled = true;
+            ShowTextClipPreview(clipId);
+            return;
+        }
+
+        if (e.Key != Key.V
+            || (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift))
+                != (ModifierKeys.Control | ModifierKeys.Shift))
+        {
+            return;
+        }
+
+        var clipboardText = TryGetClipboardText();
+        if (string.IsNullOrWhiteSpace(clipboardText))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        InsertTextAsClip(clipboardText, replaceSelection: !Editor.Selection.IsEmpty);
+    }
+
+    private static bool TryGetTextClipAtPosition(TextPointer position, out Guid clipId)
+    {
+        clipId = Guid.Empty;
+        var current = position.Parent as DependencyObject;
+        while (current is not null)
+        {
+            if (current is Hyperlink hyperlink)
+            {
+                return TryGetTextClipId(hyperlink.NavigateUri, out clipId);
+            }
+
+            current = LogicalTreeHelper.GetParent(current);
+        }
+
+        return false;
+    }
+
+    private bool SelectionIntersectsHyperlink()
+    {
+        var selectionStart = Editor.Selection.Start;
+        var selectionEnd = Editor.Selection.End;
+        return FindLogicalTextElements(Editor.Document)
+            .OfType<Hyperlink>()
+            .Any(hyperlink => selectionStart.CompareTo(hyperlink.ElementEnd) < 0
+                              && selectionEnd.CompareTo(hyperlink.ElementStart) > 0);
+    }
+
+    private void Editor_PreviewDragEnter(object sender, System.Windows.DragEventArgs e)
+    {
+        UpdateTextFileDragState(e);
+    }
+
+    private void Editor_PreviewDragOver(object sender, System.Windows.DragEventArgs e)
+    {
+        UpdateTextFileDragState(e);
+    }
+
+    private void Editor_PreviewDragLeave(object sender, System.Windows.DragEventArgs e)
+    {
+        if (!TryGetFilePaths(e.Data, out _))
+        {
+            return;
+        }
+
+        TextFileDropOverlay.Visibility = Visibility.Collapsed;
+        e.Handled = true;
+    }
+
+    private async void Editor_PreviewDrop(object sender, System.Windows.DragEventArgs e)
+    {
+        TextFileDropOverlay.Visibility = Visibility.Collapsed;
+        if (!TryGetFilePaths(e.Data, out var paths))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var insertionPosition = Editor.GetPositionFromPoint(e.GetPosition(Editor), snapToText: true);
+        await ImportTextFilesAsync(paths, insertionPosition);
+    }
+
+    private void UpdateTextFileDragState(System.Windows.DragEventArgs e)
+    {
+        if (!TryGetFilePaths(e.Data, out var paths))
+        {
+            TextFileDropOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var canImport = paths.Any(TextFileImportService.IsSupportedFile);
+        e.Effects = canImport ? System.Windows.DragDropEffects.Copy : System.Windows.DragDropEffects.None;
+        TextFileDropOverlay.Visibility = canImport ? Visibility.Visible : Visibility.Collapsed;
+        e.Handled = true;
+    }
+
+    private async Task ImportTextFilesAsync(IReadOnlyList<string> filePaths, TextPointer? insertionPosition = null)
+    {
+        var paths = filePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (paths.Count == 0)
+        {
+            return;
+        }
+
+        var targetPosition = insertionPosition
+            ?? Editor.Selection.Start.GetInsertionPosition(LogicalDirection.Forward)
+            ?? Editor.CaretPosition;
+
+        List<(string Path, TextFileImportResult Result)> importResults;
+        try
+        {
+            importResults = await Task.Run(() => paths
+                .Take(MaximumFilesPerImport)
+                .Select(path => (Path: path, Result: _textFileImportService.Import(path)))
+                .ToList());
+        }
+        catch
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipErrorReadFailed"));
+            return;
+        }
+
+        if (_allowClose || !IsLoaded)
+        {
+            return;
+        }
+
+        Editor.Selection.Select(targetPosition, targetPosition);
+        Editor.CaretPosition = targetPosition;
+
+        Editor.Focus();
+        var errors = new List<string>();
+        var importedCount = 0;
+
+        _isApplyingBatchEdit = true;
+        try
+        {
+            foreach (var importedFile in importResults)
+            {
+                var path = importedFile.Path;
+                var result = importedFile.Result;
+                if (!result.IsSuccess)
+                {
+                    errors.Add(FormatTextFileImportError(path, result.Error));
+                    continue;
+                }
+
+                var clip = result.Clip!;
+                var storedSize = GetTextClipStoredSize(clip);
+                if (!CanStoreTextClip(storedSize))
+                {
+                    errors.Add($"{GetSafeFileName(path)} — {LocalizationService.Get("TextClipErrorNoteLimit")}");
+                    continue;
+                }
+
+                if (!TryInsertTextClipLink(clip))
+                {
+                    errors.Add($"{GetSafeFileName(path)} — {LocalizationService.Get("TextClipErrorInsertFailed")}");
+                    continue;
+                }
+
+                ViewModel.AddTextClip(clip);
+                importedCount++;
+            }
+        }
+        finally
+        {
+            _isApplyingBatchEdit = false;
+        }
+
+        if (paths.Count > MaximumFilesPerImport)
+        {
+            errors.Add(string.Format(
+                System.Globalization.CultureInfo.CurrentCulture,
+                LocalizationService.Get("TextClipErrorTooManyFiles"),
+                MaximumFilesPerImport));
+        }
+
+        if (importedCount > 0)
+        {
+            SaveEditorContent();
+        }
+
+        if (errors.Count > 0)
+        {
+            ShowTextFileImportErrors(errors);
+        }
+    }
+
+    private bool CanStoreTextClip(long additionalBytes)
+    {
+        var attachedClipIds = GetAttachedTextClipIds();
+        var storedBytes = ViewModel.TextClips
+            .Where(clip => attachedClipIds.Contains(clip.Id))
+            .Sum(GetTextClipStoredSize);
+        return additionalBytes >= 0
+            && ViewModel.TextClips.Count(clip => attachedClipIds.Contains(clip.Id)) < NoteModel.MaximumTextClipCount
+            && storedBytes <= NoteModel.MaximumTextClipBytes - additionalBytes;
+    }
+
+    private static long GetTextClipStoredSize(TextClipModel clip)
+    {
+        return Math.Max(clip.OriginalByteLength, Encoding.UTF8.GetByteCount(clip.Content ?? ""));
+    }
+
+    private HashSet<Guid> GetAttachedTextClipIds()
+    {
+        return FindLogicalTextElements(Editor.Document)
+            .OfType<Hyperlink>()
+            .Select(hyperlink => TryGetTextClipId(hyperlink.NavigateUri, out var clipId) ? clipId : Guid.Empty)
+            .Where(clipId => clipId != Guid.Empty)
+            .ToHashSet();
+    }
+
+    private void PruneDetachedTextClips()
+    {
+        var attachedClipIds = GetAttachedTextClipIds();
+        foreach (var clipId in ViewModel.TextClips
+                     .Select(clip => clip.Id)
+                     .Where(clipId => !attachedClipIds.Contains(clipId))
+                     .ToList())
+        {
+            ViewModel.RemoveTextClip(clipId);
+        }
+    }
+
+    private static bool TryGetFilePaths(System.Windows.IDataObject dataObject, out string[] paths)
+    {
+        paths = [];
+        try
+        {
+            if (!dataObject.GetDataPresent(System.Windows.DataFormats.FileDrop)
+                || dataObject.GetData(System.Windows.DataFormats.FileDrop) is not string[] droppedPaths)
+            {
+                return false;
+            }
+
+            paths = droppedPaths;
+            return paths.Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string FormatTextFileImportError(string path, TextFileImportError error)
+    {
+        var resourceKey = error switch
+        {
+            TextFileImportError.InvalidPath => "TextClipErrorInvalidPath",
+            TextFileImportError.FileNotFound => "TextClipErrorFileNotFound",
+            TextFileImportError.UnsupportedFileType => "TextClipErrorUnsupportedFileType",
+            TextFileImportError.FileTooLarge => "TextClipErrorFileTooLarge",
+            TextFileImportError.AccessDenied => "TextClipErrorAccessDenied",
+            TextFileImportError.UnsupportedEncoding => "TextClipErrorUnsupportedEncoding",
+            TextFileImportError.BinaryContent => "TextClipErrorBinaryContent",
+            _ => "TextClipErrorReadFailed"
+        };
+        return $"{GetSafeFileName(path)} — {LocalizationService.Get(resourceKey)}";
+    }
+
+    private static string GetSafeFileName(string path)
+    {
+        try
+        {
+            return Path.GetFileName(path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+
+    private void ShowTextFileImportErrors(IReadOnlyList<string> errors)
+    {
+        var visibleErrors = errors.Take(8).Select(error => $"• {error}").ToList();
+        if (errors.Count > visibleErrors.Count)
+        {
+            visibleErrors.Add(string.Format(
+                System.Globalization.CultureInfo.CurrentCulture,
+                LocalizationService.Get("TextClipErrorMoreFiles"),
+                errors.Count - visibleErrors.Count));
+        }
+
+        var message = LocalizationService.Get("TextClipImportErrorHeader")
+            + Environment.NewLine
+            + Environment.NewLine
+            + string.Join(Environment.NewLine, visibleErrors);
+        ShowTextClipMessage(message);
+    }
+
+    private void ShowTextClipMessage(string message, string titleResourceKey = "TextClipImportErrorTitle")
+    {
+        System.Windows.MessageBox.Show(
+            this,
+            message,
+            LocalizationService.Get(titleResourceKey),
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private async void Editor_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (TryGetFilePaths(e.SourceDataObject, out var paths))
+        {
+            e.CancelCommand();
+            await ImportTextFilesAsync(paths);
+            return;
+        }
+
         var bitmap = GetPastedBitmap(e.SourceDataObject);
         if (bitmap is null)
         {
@@ -895,7 +1589,11 @@ public partial class NoteWindow : Window
                 var format = System.Windows.DataFormats.Xaml;
                 using var stream = CreateRichContentStream(ViewModel.RichContent, ref format);
                 new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd).Load(stream, format);
-                Dispatcher.BeginInvoke(ConfigureImagesInDocument, DispatcherPriority.Loaded);
+                Dispatcher.BeginInvoke(() =>
+                {
+                    ConfigureImagesInDocument();
+                    ConfigureTextClipLinksInDocument();
+                }, DispatcherPriority.Loaded);
                 return;
             }
 
@@ -1414,6 +2112,308 @@ public partial class NoteWindow : Window
         }
     }
 
+    private bool TryInsertTextClipLink(TextClipModel clip)
+    {
+        try
+        {
+            var insertionPosition = GetSafeTextClipInsertionPosition(Editor.CaretPosition);
+            if (insertionPosition?.Paragraph is null)
+            {
+                var paragraph = new Paragraph();
+                Editor.Document.Blocks.Add(paragraph);
+                insertionPosition = paragraph.ContentStart;
+            }
+
+            var hyperlink = new Hyperlink(new Run(CreateTextClipLabel(clip)), insertionPosition)
+            {
+                NavigateUri = CreateTextClipUri(clip.Id)
+            };
+            ConfigureTextClipLink(hyperlink);
+
+            var trailingSpace = new Run(" ");
+            if (hyperlink.Parent is Paragraph paragraphParent)
+            {
+                paragraphParent.Inlines.InsertAfter(hyperlink, trailingSpace);
+                Editor.CaretPosition = trailingSpace.ContentEnd;
+            }
+            else if (hyperlink.Parent is Span spanParent)
+            {
+                spanParent.Inlines.InsertAfter(hyperlink, trailingSpace);
+                Editor.CaretPosition = trailingSpace.ContentEnd;
+            }
+
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private TextPointer? GetSafeTextClipInsertionPosition(TextPointer position)
+    {
+        var insertionPosition = position.GetInsertionPosition(LogicalDirection.Forward) ?? position;
+        var current = insertionPosition.Parent as DependencyObject;
+        while (current is not null)
+        {
+            if (current is Hyperlink containingHyperlink)
+            {
+                if (containingHyperlink.NextInline is Run { Text: " " } separator)
+                {
+                    return separator.ContentEnd.GetInsertionPosition(LogicalDirection.Forward)
+                           ?? separator.ContentEnd;
+                }
+
+                return containingHyperlink.ElementEnd.GetInsertionPosition(LogicalDirection.Forward)
+                       ?? containingHyperlink.ElementEnd;
+            }
+
+            current = LogicalTreeHelper.GetParent(current);
+        }
+
+        return insertionPosition;
+    }
+
+    private void ConfigureTextClipLinksInDocument()
+    {
+        foreach (var hyperlink in FindLogicalTextElements(Editor.Document).OfType<Hyperlink>())
+        {
+            if (TryGetTextClipId(hyperlink.NavigateUri, out _))
+            {
+                ConfigureTextClipLink(hyperlink);
+            }
+        }
+    }
+
+    private void ConfigureTextClipLink(Hyperlink hyperlink)
+    {
+        hyperlink.Foreground = ToBrush(ViewModel.LinkForegroundHex);
+        hyperlink.Background = ToBrush("#72FFFFFF");
+        hyperlink.FontSize = 12.5;
+        hyperlink.FontWeight = FontWeights.SemiBold;
+        hyperlink.TextDecorations = null;
+        hyperlink.Cursor = System.Windows.Input.Cursors.Hand;
+        hyperlink.Focusable = true;
+        hyperlink.ToolTip = LocalizationService.Get("TextClipChipTooltip");
+        hyperlink.ContextMenu = CreateTextClipContextMenu(hyperlink);
+        hyperlink.RemoveHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(TextClipLink_PreviewMouseDown));
+        hyperlink.AddHandler(Mouse.PreviewMouseDownEvent, new MouseButtonEventHandler(TextClipLink_PreviewMouseDown), true);
+        hyperlink.RemoveHandler(Mouse.MouseUpEvent, new MouseButtonEventHandler(TextClipLink_MouseUp));
+        hyperlink.AddHandler(Mouse.MouseUpEvent, new MouseButtonEventHandler(TextClipLink_MouseUp), true);
+        hyperlink.RemoveHandler(Mouse.QueryCursorEvent, new QueryCursorEventHandler(TextClipLink_QueryCursor));
+        hyperlink.AddHandler(Mouse.QueryCursorEvent, new QueryCursorEventHandler(TextClipLink_QueryCursor), true);
+    }
+
+    private ContextMenu CreateTextClipContextMenu(Hyperlink hyperlink)
+    {
+        var menu = new ContextMenu();
+
+        var preview = new MenuItem { Header = LocalizationService.Get("TextClipContextPreview") };
+        preview.Click += (_, _) =>
+        {
+            if (TryGetTextClipId(hyperlink.NavigateUri, out var clipId))
+            {
+                ShowTextClipPreview(clipId);
+            }
+        };
+        menu.Items.Add(preview);
+
+        var copy = new MenuItem { Header = LocalizationService.Get("TextClipContextCopy") };
+        copy.Click += (_, _) => CopyTextClip(hyperlink);
+        menu.Items.Add(copy);
+
+        menu.Items.Add(new Separator());
+        var remove = new MenuItem { Header = LocalizationService.Get("TextClipContextRemove") };
+        remove.Click += (_, _) => RemoveTextClip(hyperlink);
+        menu.Items.Add(remove);
+
+        return menu;
+    }
+
+    private void CopyTextClip(Hyperlink hyperlink)
+    {
+        if (!TryGetTextClipId(hyperlink.NavigateUri, out var clipId)
+            || !ViewModel.TryGetTextClip(clipId, out var clip)
+            || clip is null)
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipMissing"), "TextClipPreviewTitle");
+            return;
+        }
+
+        try
+        {
+            System.Windows.Clipboard.SetText(clip.Content);
+        }
+        catch
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipClipboardError"), "TextClipPreviewTitle");
+        }
+    }
+
+    private void RemoveTextClip(Hyperlink hyperlink)
+    {
+        if (!TryGetTextClipId(hyperlink.NavigateUri, out _))
+        {
+            return;
+        }
+
+        _isApplyingBatchEdit = true;
+        try
+        {
+            var trailingInline = hyperlink.NextInline;
+            RemoveInlineFromParent(hyperlink);
+            if (trailingInline is Run { Text: " " })
+            {
+                RemoveInlineFromParent(trailingInline);
+            }
+
+        }
+        finally
+        {
+            _isApplyingBatchEdit = false;
+        }
+
+        SaveEditorContent();
+        Editor.Focus();
+    }
+
+    private static void RemoveInlineFromParent(Inline inline)
+    {
+        switch (inline.Parent)
+        {
+            case Paragraph paragraph:
+                paragraph.Inlines.Remove(inline);
+                break;
+            case Span span:
+                span.Inlines.Remove(inline);
+                break;
+        }
+    }
+
+    private void TextClipLink_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || sender is not Hyperlink hyperlink)
+        {
+            return;
+        }
+
+        _pressedTextClipLink = hyperlink;
+        _textClipMouseDownPoint = e.GetPosition(Editor);
+    }
+
+    private void TextClipLink_MouseUp(object sender, MouseButtonEventArgs e)
+    {
+        var pressedLink = _pressedTextClipLink;
+        _pressedTextClipLink = null;
+        if (e.ChangedButton != MouseButton.Left
+            || sender is not Hyperlink hyperlink
+            || !ReferenceEquals(pressedLink, hyperlink))
+        {
+            return;
+        }
+
+        var position = e.GetPosition(Editor);
+        if (Math.Abs(position.X - _textClipMouseDownPoint.X) >= SystemParameters.MinimumHorizontalDragDistance
+            || Math.Abs(position.Y - _textClipMouseDownPoint.Y) >= SystemParameters.MinimumVerticalDragDistance
+            || !TryGetTextClipId(hyperlink.NavigateUri, out var clipId))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        ShowTextClipPreview(clipId);
+    }
+
+    private static void TextClipLink_QueryCursor(object sender, QueryCursorEventArgs e)
+    {
+        e.Cursor = System.Windows.Input.Cursors.Hand;
+        e.Handled = true;
+    }
+
+    private void ShowTextClipPreview(Guid clipId)
+    {
+        if (!ViewModel.TryGetTextClip(clipId, out var clip) || clip is null)
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipMissing"), "TextClipPreviewTitle");
+            return;
+        }
+
+        if (_textClipPreviewWindows.TryGetValue(clipId, out var existingWindow))
+        {
+            if (existingWindow.WindowState == WindowState.Minimized)
+            {
+                existingWindow.WindowState = WindowState.Normal;
+            }
+
+            existingWindow.Activate();
+            return;
+        }
+
+        var previewWindow = new TextClipPreviewWindow(clip)
+        {
+            Owner = this
+        };
+        previewWindow.Closed += (_, _) => _textClipPreviewWindows.Remove(clipId);
+        _textClipPreviewWindows[clipId] = previewWindow;
+        previewWindow.Show();
+        previewWindow.Activate();
+    }
+
+    private void CloseTextClipPreviews()
+    {
+        foreach (var previewWindow in _textClipPreviewWindows.Values.ToList())
+        {
+            previewWindow.Close();
+        }
+
+        _textClipPreviewWindows.Clear();
+    }
+
+    private static Uri CreateTextClipUri(Guid clipId)
+    {
+        return new Uri($"{TextClipUriScheme}://{TextClipUriHost}/{clipId:D}", UriKind.Absolute);
+    }
+
+    private static bool TryGetTextClipId(Uri? uri, out Guid clipId)
+    {
+        clipId = Guid.Empty;
+        return uri is not null
+            && string.Equals(uri.Scheme, TextClipUriScheme, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(uri.Host, TextClipUriHost, StringComparison.OrdinalIgnoreCase)
+            && Guid.TryParse(uri.AbsolutePath.Trim('/'), out clipId);
+    }
+
+    private static string CreateTextClipLabel(TextClipModel clip)
+    {
+        var title = TruncateTextClipTitle(clip.Title.Replace('\r', ' ').Replace('\n', ' ').Trim());
+
+        var extension = clip.FileExtension.TrimStart('.');
+        var kind = string.IsNullOrWhiteSpace(extension) ? "TEXT" : extension.ToUpperInvariant();
+        return $"  ▤  {title}   {kind}  ";
+    }
+
+    private static string TruncateTextClipTitle(string title)
+    {
+        const int maximumVisualUnits = 26;
+        var visualUnits = 0;
+        var builder = new StringBuilder();
+
+        foreach (var rune in title.EnumerateRunes())
+        {
+            var runeUnits = rune.Value <= 0x7F ? 1 : 2;
+            if (visualUnits + runeUnits > maximumVisualUnits - 1)
+            {
+                builder.Append('…');
+                return builder.ToString();
+            }
+
+            builder.Append(rune.ToString());
+            visualUnits += runeUnits;
+        }
+
+        return builder.ToString();
+    }
+
     private static string NormalizeUrl(string url)
     {
         var trimmedUrl = url.Trim();
@@ -1427,8 +2427,22 @@ public partial class NoteWindow : Window
         return $"https://{trimmedUrl}";
     }
 
-    private static void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
+        if (TryGetTextClipId(e.Uri, out var clipId))
+        {
+            ShowTextClipPreview(clipId);
+            e.Handled = true;
+            return;
+        }
+
+        if (string.Equals(e.Uri.Scheme, TextClipUriScheme, StringComparison.OrdinalIgnoreCase))
+        {
+            ShowTextClipMessage(LocalizationService.Get("TextClipMissing"), "TextClipPreviewTitle");
+            e.Handled = true;
+            return;
+        }
+
         try
         {
             Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
@@ -1565,14 +2579,10 @@ public partial class NoteWindow : Window
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmNcHitTest && CanResizeFromWindowEdges())
+        if (msg is WmDisplayChange or WmDpiChanged)
         {
-            var hitTest = HitTestResizeBorder(hwnd, lParam);
-            if (hitTest != IntPtr.Zero)
-            {
-                handled = true;
-                return hitTest;
-            }
+            _windowResizeThumb?.CancelDrag();
+            Dispatcher.BeginInvoke(FitWindowToCurrentWorkArea, DispatcherPriority.Loaded);
         }
 
         if (!ShouldBlockMinimize())
@@ -1624,70 +2634,6 @@ public partial class NoteWindow : Window
         return !_isIconCollapsed
             && WindowState == WindowState.Normal
             && ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
-    }
-
-    private static IntPtr HitTestResizeBorder(IntPtr hwnd, IntPtr lParam)
-    {
-        if (!NativeMethods.GetWindowRect(hwnd, out var rect))
-        {
-            return IntPtr.Zero;
-        }
-
-        var point = GetScreenPoint(lParam);
-        var onLeft = point.X >= rect.Left && point.X < rect.Left + ResizeBorderPixels;
-        var onRight = point.X <= rect.Right && point.X > rect.Right - ResizeBorderPixels;
-        var onTop = point.Y >= rect.Top && point.Y < rect.Top + ResizeBorderPixels;
-        var onBottom = point.Y <= rect.Bottom && point.Y > rect.Bottom - ResizeBorderPixels;
-
-        if (onTop && onLeft)
-        {
-            return new IntPtr(HtTopLeft);
-        }
-
-        if (onTop && onRight)
-        {
-            return new IntPtr(HtTopRight);
-        }
-
-        if (onBottom && onLeft)
-        {
-            return new IntPtr(HtBottomLeft);
-        }
-
-        if (onBottom && onRight)
-        {
-            return new IntPtr(HtBottomRight);
-        }
-
-        if (onLeft)
-        {
-            return new IntPtr(HtLeft);
-        }
-
-        if (onRight)
-        {
-            return new IntPtr(HtRight);
-        }
-
-        if (onTop)
-        {
-            return new IntPtr(HtTop);
-        }
-
-        if (onBottom)
-        {
-            return new IntPtr(HtBottom);
-        }
-
-        return IntPtr.Zero;
-    }
-
-    private static NativePoint GetScreenPoint(IntPtr lParam)
-    {
-        var value = lParam.ToInt64();
-        return new NativePoint(
-            unchecked((short)(value & 0xFFFF)),
-            unchecked((short)((value >> 16) & 0xFFFF)));
     }
 
     private bool ShouldBlockMinimize()
@@ -1790,31 +2736,32 @@ public partial class NoteWindow : Window
             || string.Equals(className, "SHELLDLL_DefView", StringComparison.Ordinal);
     }
 
-    private void UpdateGeometry()
+    private void UpdateGeometry(Rect? requestedBounds = null)
     {
-        if (!IsLoaded || _isIconCollapsed || WindowState != WindowState.Normal)
+        if (!IsLoaded || _isIconCollapsed || _isUpdatingWindowBounds || WindowState != WindowState.Normal)
         {
             return;
         }
 
-        if (double.IsFinite(Left))
+        var bounds = requestedBounds ?? new Rect(Left, Top, ActualWidth, ActualHeight);
+        if (double.IsFinite(bounds.Left))
         {
-            ViewModel.X = Left;
+            ViewModel.X = bounds.Left;
         }
 
-        if (double.IsFinite(Top))
+        if (double.IsFinite(bounds.Top))
         {
-            ViewModel.Y = Top;
+            ViewModel.Y = bounds.Top;
         }
 
-        if (double.IsFinite(ActualWidth) && ActualWidth > 0)
+        if (double.IsFinite(bounds.Width) && bounds.Width > 0)
         {
-            ViewModel.Width = ActualWidth;
+            ViewModel.Width = bounds.Width;
         }
 
-        if (double.IsFinite(ActualHeight) && ActualHeight > 0)
+        if (double.IsFinite(bounds.Height) && bounds.Height > 0)
         {
-            ViewModel.Height = ActualHeight;
+            ViewModel.Height = bounds.Height;
         }
     }
 
@@ -1857,15 +2804,6 @@ public partial class NoteWindow : Window
         public int X { get; }
 
         public int Y { get; }
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativeRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
     }
 
     private static class NativeMethods
@@ -1932,7 +2870,7 @@ public partial class NoteWindow : Window
         internal static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
-        internal static extern bool GetWindowRect(IntPtr hWnd, out NativeRect lpRect);
+        internal static extern bool GetCursorPos(out NativePoint lpPoint);
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);

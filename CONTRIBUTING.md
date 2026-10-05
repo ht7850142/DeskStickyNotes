@@ -35,6 +35,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Please check:
 
 - `dotnet build -c Release` passes.
+- `dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release` passes on Windows.
 - New UI text is added to both `src/DeskStickyNotes/Localization/Strings.en-US.xaml` and `src/DeskStickyNotes/Localization/Strings.zh-Hans.xaml`.
 - The app still works without network access.
 - Note content and settings remain local.

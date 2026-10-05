@@ -42,6 +42,7 @@ src/DeskStickyNotes/Models/
   LanguageOption.cs
   NoteModel.cs
   NotePalette.cs
+  TextClipModel.cs
 
 src/DeskStickyNotes/ViewModels/
   NoteViewModel.cs
@@ -53,6 +54,7 @@ src/DeskStickyNotes/Views/
   NoteWindow.xaml
   SettingsWindow.xaml
   HyperlinkWindow.xaml
+  TextClipPreviewWindow.xaml
 ```
 
 The view models expose note and settings state. Views handle WPF-specific UI behavior such as rich text editing, window dragging, tray-window interactions, and popup placement.
@@ -65,10 +67,17 @@ The view models expose note and settings state. Views handle WPF-specific UI beh
 - stores data in `%AppData%\DeskStickyNotes`
 - uses `System.Text.Json`
 
+`TextFileImportService`
+
+- validates supported text-like files and the 2 MB per-file limit
+- decodes UTF and common Windows/Chinese text encodings while rejecting binary content
+- creates snapshot-backed `TextClipModel` values
+
 `TrayService`
 
 - wraps `System.Windows.Forms.NotifyIcon`
 - owns the tray menu
+- refreshes a per-note submenu with current names, visible/hidden state, and independent Show/Hide actions
 - calls back into app-level actions
 
 `StartupService`
@@ -90,16 +99,24 @@ The view models expose note and settings state. Views handle WPF-specific UI beh
 - per-note color palette
 - per-note topmost state
 - optional collapsed icon mode
+- compact text-slice links backed by locally persisted full-text snapshots
+- text-file drag and drop with a separate read-only preview window
 
-Collapsed icon mode keeps the note topmost, reduces the window to a small draggable icon, and preserves the previous expanded size.
+Collapsed icon mode keeps the note topmost, reduces the window to a small draggable icon, and preserves the previous expanded size. Expansion fits the window to the icon's current monitor work area using device-to-WPF coordinate conversion, keeping it clear of screen edges and the taskbar. A separate icon anchor prevents repeated collapse/restore from moving edge icons.
+
+Transparent borderless notes use WPF `Thumb` controls over the visible edges and corners for resizing. Drag distances use screen coordinates and the window's DPI scale so top/left resizing stays stable. Geometry updates are batched before saving, and persistence preserves user-selected sizes for empty notes as well as populated ones.
 
 ## Persistence
+
+The toolbar wraps at compact widths. Notes fit to the current work area on startup and display/DPI changes, and resizing lets WPF schedule layout instead of forcing layout on every mouse movement. Per-note names are normalized in the model, edited through an independent dialog, and reflected in captions and icon tooltips.
 
 Notes are stored as local JSON. Important fields include:
 
 - `id`
+- `title` (blank for the localized default name; compatible with older notes)
 - `textContent`
 - `richContent`
+- `textClips` (snapshot content and source metadata)
 - `x`
 - `y`
 - `width`
