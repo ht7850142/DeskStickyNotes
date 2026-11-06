@@ -20,7 +20,7 @@ using DeskStickyNotes.ViewModels;
 
 namespace DeskStickyNotes.Views;
 
-public partial class NoteWindow : Window
+public partial class NoteWindow : Window, IDesktopRecoverableNote
 {
     private const int GwlExStyle = -20;
     private const long WsExToolWindow = 0x00000080L;
@@ -49,6 +49,7 @@ public partial class NoteWindow : Window
     private const uint SwpFrameChanged = 0x0020;
     private const uint SwpShowWindow = 0x0040;
     private const uint SwpHideWindow = 0x0080;
+    private const uint SwpNoOwnerZOrder = 0x0200;
     private const double CollapsedIconSize = 64;
     private static readonly IntPtr HwndTop = IntPtr.Zero;
     private static readonly IntPtr HwndTopmost = new(-1);
@@ -57,8 +58,8 @@ public partial class NoteWindow : Window
     private Popup? _openFlyout;
     private readonly TextFileImportService _textFileImportService = new();
     private readonly Dictionary<Guid, TextClipPreviewWindow> _textClipPreviewWindows = new();
-    private readonly DispatcherTimer _showDesktopRecoveryTimer;
     private bool _allowClose;
+    private bool _temporaryShortcutTopmost;
     private bool _collapsedIconWasDragged;
     private bool _isIconCollapsed;
     private bool _isUpdatingWindowBounds;
@@ -87,7 +88,6 @@ public partial class NoteWindow : Window
     private DpiScale _windowResizeDpi;
     private NoteResizeEdge _windowResizeEdge;
     private ResizeMode _expandedResizeMode;
-    private int _showDesktopRecoveryAttempts;
 
     public NoteWindow(NoteViewModel viewModel)
     {
@@ -104,26 +104,41 @@ public partial class NoteWindow : Window
         Editor.AddHandler(System.Windows.DragDrop.PreviewDropEvent, new System.Windows.DragEventHandler(Editor_PreviewDrop), true);
         System.Windows.DataObject.AddPastingHandler(Editor, Editor_Pasting);
         LoadEditorContent();
-
-        _showDesktopRecoveryTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(100)
-        };
-        _showDesktopRecoveryTimer.Tick += ShowDesktopRecoveryTimer_Tick;
+        UpdateEditorFeedback();
 
         SourceInitialized += OnSourceInitialized;
-        Loaded += (_, _) =>
-        {
-            FitWindowToCurrentWorkArea();
-            _showDesktopRecoveryTimer.Start();
-        };
+        Loaded += (_, _) => FitWindowToCurrentWorkArea();
         LocationChanged += (_, _) => UpdateGeometry();
         SizeChanged += (_, _) => UpdateGeometry();
         StateChanged += OnStateChanged;
         LocalizationService.LanguageChanged += LocalizationService_LanguageChanged;
+        Deactivated += (_, _) =>
+        {
+            if (!_temporaryShortcutTopmost) return;
+            _temporaryShortcutTopmost = false;
+            SetCurrentValue(TopmostProperty, _isIconCollapsed || ViewModel.Topmost);
+        };
     }
 
     private NoteViewModel ViewModel => (NoteViewModel)DataContext;
+
+    internal void FocusNoteContent()
+    {
+        if (_isIconCollapsed) CollapsedIconContent.Focus();
+        else Editor.Focus();
+    }
+
+    internal void RevealForShortcut(bool abovePinnedPeer)
+    {
+        if (_isIconCollapsed) RestoreFromIcon();
+        if (abovePinnedPeer && !ViewModel.Topmost)
+        {
+            _temporaryShortcutTopmost = true;
+            SetCurrentValue(TopmostProperty, true);
+        }
+        Activate();
+        FocusNoteContent();
+    }
 
     public void CloseForApplication()
     {
@@ -170,7 +185,6 @@ public partial class NoteWindow : Window
         CloseOpenFlyout();
         TextFileDropOverlay.Visibility = Visibility.Collapsed;
         CloseTextClipPreviews();
-        _showDesktopRecoveryTimer.Stop();
         LocalizationService.LanguageChanged -= LocalizationService_LanguageChanged;
         ViewModel.PropertyChanged -= NoteViewModel_PropertyChanged;
         _hwndSource?.RemoveHook(WndProc);
@@ -179,6 +193,7 @@ public partial class NoteWindow : Window
 
     private void LocalizationService_LanguageChanged(object? sender, EventArgs e)
     {
+        CloseOpenFlyout();
         UpdateNoteTitle();
         ConfigureTextClipLinksInDocument();
     }
@@ -210,6 +225,12 @@ public partial class NoteWindow : Window
     {
         if (e.ChangedButton == MouseButton.Left && !IsInsideButton(e.OriginalSource as DependencyObject))
         {
+            if (e.ClickCount == 2)
+            {
+                RenameNote();
+                e.Handled = true;
+                return;
+            }
             _isTitleMouseDown = true;
             _titleMouseDownPoint = e.GetPosition(this);
             if (sender is UIElement element)
@@ -274,7 +295,6 @@ public partial class NoteWindow : Window
             element.ReleaseMouseCapture();
         }
 
-        CollapseToIcon();
         e.Handled = true;
     }
 
@@ -282,6 +302,19 @@ public partial class NoteWindow : Window
     {
         CollapseToIcon();
         e.Handled = true;
+    }
+
+    private void NoteMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button owner) return;
+        var rename = CreateFlyoutButton(LocalizationService.Get("RenameNoteTitle"));
+        rename.Click += (_, _) => RenameNote();
+        var minimize = CreateFlyoutButton(LocalizationService.Get("TipHideNote"));
+        minimize.Click += (_, _) => { CloseOpenFlyout(); ViewModel.HideCommand.Execute(null); };
+        var delete = CreateFlyoutButton(LocalizationService.Get("TipDeleteNote"));
+        delete.Foreground = ToBrush("#963A36");
+        delete.Click += (_, _) => { CloseOpenFlyout(); ViewModel.DeleteCommand.Execute(null); };
+        ShowFlyout(owner, new UIElement[] { rename, minimize, CreateFlyoutSeparator(), delete }, 168);
     }
 
     private void CollapsedIcon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -389,10 +422,8 @@ public partial class NoteWindow : Window
         _expandedMinHeight = MinHeight;
         _expandedResizeMode = ResizeMode;
 
-        if (!ViewModel.Topmost)
-        {
-            ViewModel.Topmost = true;
-        }
+        // The compact reminder floats, but must not overwrite the saved pin preference.
+        SetCurrentValue(TopmostProperty, true);
 
         _isIconCollapsed = true;
         WindowResizeHandles.IsHitTestVisible = false;
@@ -494,9 +525,11 @@ public partial class NoteWindow : Window
         ApplyWindowBounds(bounds);
         _lastRestoredBounds = bounds;
         _isIconCollapsed = false;
+        SetCurrentValue(TopmostProperty, ViewModel.Topmost);
         WindowResizeHandles.IsHitTestVisible = true;
         UpdateGeometry();
         Activate();
+        FocusNoteContent();
     }
 
     private Rect GetCurrentWorkArea()
@@ -1243,7 +1276,44 @@ public partial class NoteWindow : Window
         {
             SaveEditorContent();
         }
+        UpdateEditorFeedback();
     }
+
+    private void Editor_SelectionChanged(object sender, RoutedEventArgs e) => UpdateFormattingFeedback();
+
+    private void UpdateEditorFeedback()
+    {
+        if (DataContext is not NoteViewModel || EmptyNoteHint is null || _isLoadingEditor) return;
+        var hasText = !string.IsNullOrWhiteSpace(new TextRange(Editor.Document.ContentStart, Editor.Document.ContentEnd).Text);
+        var hasEmbeddedContent = FindLogicalTextElements(Editor.Document)
+            .Any(element => element is InlineUIContainer or BlockUIContainer);
+        EmptyNoteHint.Visibility = hasText || hasEmbeddedContent ? Visibility.Collapsed : Visibility.Visible;
+        UpdateFormattingFeedback();
+    }
+
+    private void UpdateFormattingFeedback()
+    {
+        if (DataContext is not NoteViewModel || EditorToolbar is null || _isLoadingEditor) return;
+        foreach (var button in FindVisualChildren<System.Windows.Controls.Button>(EditorToolbar))
+        {
+            var selected = (button.Tag as string) switch
+            {
+                "Bold" => Equals(Editor.Selection.GetPropertyValue(TextElement.FontWeightProperty), FontWeights.Bold),
+                "Italic" => Equals(Editor.Selection.GetPropertyValue(TextElement.FontStyleProperty), FontStyles.Italic),
+                "Underline" => HasSelectionDecoration(TextDecorationLocation.Underline),
+                "Strike" => HasSelectionDecoration(TextDecorationLocation.Strikethrough),
+                "AlignLeft" => Equals(Editor.Selection.GetPropertyValue(Paragraph.TextAlignmentProperty), TextAlignment.Left),
+                "AlignCenter" => Equals(Editor.Selection.GetPropertyValue(Paragraph.TextAlignmentProperty), TextAlignment.Center),
+                "AlignRight" => Equals(Editor.Selection.GetPropertyValue(Paragraph.TextAlignmentProperty), TextAlignment.Right),
+                _ => false
+            };
+            Selector.SetIsSelected(button, selected);
+        }
+    }
+
+    private bool HasSelectionDecoration(TextDecorationLocation location) =>
+        Editor.Selection.GetPropertyValue(Inline.TextDecorationsProperty) is TextDecorationCollection decorations
+        && decorations.Any(decoration => decoration.Location == location);
 
     private void Editor_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
@@ -2558,7 +2628,7 @@ public partial class NoteWindow : Window
             0,
             0,
             0,
-            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpFrameChanged);
+            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
     }
 
     private void OnStateChanged(object? sender, EventArgs e)
@@ -2646,71 +2716,37 @@ public partial class NoteWindow : Window
 
     private void QueueShowDesktopRecovery()
     {
-        if (!ShouldBlockMinimize())
-        {
-            return;
-        }
-
-        _showDesktopRecoveryAttempts = Math.Max(_showDesktopRecoveryAttempts, 30);
-        Dispatcher.BeginInvoke(RestoreAfterShowDesktop);
+        if (ShouldBlockMinimize()) App.Current.RequestDesktopRecovery();
     }
 
-    private void ShowDesktopRecoveryTimer_Tick(object? sender, EventArgs e)
+    bool IDesktopRecoverableNote.CanRecoverAfterShowDesktop => ShouldBlockMinimize();
+
+    bool IDesktopRecoverableNote.IsSuppressedByShell =>
+        IsNativeWindowSuppressed(new WindowInteropHelper(this).Handle);
+
+    void IDesktopRecoverableNote.RecoverAfterShowDesktop(bool restoreVisibility)
     {
-        if (!ShouldBlockMinimize())
-        {
-            _showDesktopRecoveryAttempts = 0;
-            return;
-        }
+        if (!ShouldBlockMinimize()) return;
 
         var handle = new WindowInteropHelper(this).Handle;
-        if (_showDesktopRecoveryAttempts > 0
-            || IsNativeWindowSuppressed(handle)
-            || IsShellDesktopForeground())
+        if (restoreVisibility)
         {
-            RestoreAfterShowDesktop();
-        }
-    }
-
-    private void RestoreAfterShowDesktop()
-    {
-        if (!ShouldBlockMinimize())
-        {
-            _showDesktopRecoveryAttempts = 0;
-            return;
-        }
-
-        var handle = new WindowInteropHelper(this).Handle;
-
-        if (!IsVisible)
-        {
-            Show();
-        }
-
-        if (WindowState == WindowState.Minimized)
-        {
-            WindowState = WindowState.Normal;
+            if (!IsVisible) Show();
+            // SW_SHOWNOACTIVATE also restores a minimized native window. Let WPF
+            // observe WM_SIZE instead of assigning WindowState and stealing focus.
+            if (handle != IntPtr.Zero) NativeMethods.ShowWindowAsync(handle, SwShownoactivate);
         }
 
         if (handle != IntPtr.Zero)
         {
-            NativeMethods.ShowWindowAsync(handle, SwShownoactivate);
             NativeMethods.SetWindowPos(
                 handle,
-                ViewModel.Topmost ? HwndTopmost : HwndTop,
+                Topmost ? HwndTopmost : HwndTop,
                 0,
                 0,
                 0,
                 0,
-                SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow | SwpFrameChanged);
-        }
-
-        ShowInTaskbar = false;
-        ApplyTaskbarVisibility(showInTaskbar: false);
-
-        if (_showDesktopRecoveryAttempts > 0)
-        {
-            _showDesktopRecoveryAttempts--;
+                SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow | SwpNoOwnerZOrder);
         }
     }
 
@@ -2722,7 +2758,7 @@ public partial class NoteWindow : Window
                 || NativeMethods.IsWindowCloaked(handle));
     }
 
-    private static bool IsShellDesktopForeground()
+    internal static bool IsShellDesktopForeground()
     {
         var foregroundWindow = NativeMethods.GetForegroundWindow();
         if (foregroundWindow == IntPtr.Zero)

@@ -29,7 +29,7 @@ If `dotnet` is not on `Path`, run:
 & 'C:\Program Files\dotnet\dotnet.exe' build -c Release
 ```
 
-Run the window geometry and persistence regression checks before packaging:
+Run the window, persistence, global-shortcut, and localization regression checks before packaging:
 
 ```powershell
 dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release
@@ -82,6 +82,10 @@ Manually verify:
 - restart restores notes
 - settings window opens
 - language switching works
+- all seven UI languages fit the settings window and action footer
+- default global shortcuts create and cycle notes, including hidden, minimized, and collapsed notes
+- shortcut recording, clearing/disabling, reset, and duplicate/occupied-combination errors work
+- overlapping pinned notes remain stable on the desktop and after Win+D
 - startup toggle writes/removes the Run registry value
 - installer can install over the previous version
 - portable package starts from an extracted folder

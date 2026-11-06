@@ -12,11 +12,11 @@ public static class NotePalette
 
     private static readonly NoteColorOption[] Options =
     [
-        new(Yellow, "#FFF6C7", "#F8E79D", "#E8D47A", "#FFE27A"),
-        new(Green, "#DFF6DD", "#BEE8BC", "#97D395", "#A7E3A2"),
-        new(Blue, "#DCEBFF", "#BBD8FF", "#8DB9F0", "#9CC7FF"),
-        new(Pink, "#FFE2EC", "#FFC2D6", "#F19AB7", "#FFB3CC"),
-        new(White, "#FAFAFA", "#ECEFF3", "#D0D5DD", "#FFFFFF")
+        new(Yellow, "#FFF8D6", "#F3E7AE", "#D9CA8D", "#E6C65C"),
+        new(Green, "#E9F3E5", "#D3E5CA", "#ACC5A2", "#A1C392"),
+        new(Blue, "#E9F1FA", "#D2E2F1", "#A6BFD7", "#94B8D7"),
+        new(Pink, "#FAEAF0", "#F0D4DF", "#D5AFBE", "#DCA5BB"),
+        new(White, "#FAFAF7", "#EAECE6", "#C9CFC4", "#FFFFFF")
     ];
 
     public static IReadOnlyList<string> Names { get; } = Options.Select(option => option.Name).ToArray();

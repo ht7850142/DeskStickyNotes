@@ -54,6 +54,9 @@ public sealed class NoteStorageService
         settings.DefaultColor = NotePalette.Normalize(settings.DefaultColor);
         settings.DefaultFontSize = Math.Clamp(settings.DefaultFontSize, 10, 28);
         settings.AutoSaveIntervalSeconds = Math.Clamp(settings.AutoSaveIntervalSeconds, 1, 60);
+        settings.NewNoteHotkey ??= HotkeyGesture.DefaultNewNote;
+        settings.NextNoteHotkey ??= HotkeyGesture.DefaultNextNote;
+        settings.SchemaVersion = Math.Max(4, settings.SchemaVersion);
         return settings;
     }
 

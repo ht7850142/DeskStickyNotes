@@ -24,7 +24,7 @@
 #define RuntimeInstallerName "windowsdesktop-runtime-" + RuntimeVersion + "-win-x64.exe"
 #define MyAppName "DeskStickyNotes"
 #ifndef MyAppVersion
-#define MyAppVersion "0.4.0"
+#define MyAppVersion "0.6.0"
 #endif
 #define MyAppPublisher "DeskStickyNotes"
 #define MyAppExeName "DeskStickyNotes.exe"

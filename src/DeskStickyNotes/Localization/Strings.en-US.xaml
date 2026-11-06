@@ -18,6 +18,9 @@
 
     <sys:String x:Key="TipChangeColor">Adjust note appearance</sys:String>
     <sys:String x:Key="TipAlwaysOnTop">Always on top</sys:String>
+    <sys:String x:Key="TipUnpinNote">Pinned above other apps · click to unpin</sys:String>
+    <sys:String x:Key="NoteEditorName">Note content</sys:String>
+    <sys:String x:Key="EmptyNoteHint">Write a thought, make a list, or drop a text file here…</sys:String>
     <sys:String x:Key="TipCollapseNote">Collapse to icon</sys:String>
     <sys:String x:Key="TipRestoreNote">Click to restore, drag to move</sys:String>
     <sys:String x:Key="TipHideNote">Minimize to taskbar</sys:String>
@@ -100,17 +103,17 @@
 
     <sys:String x:Key="TipResizeNote">Drag an edge or corner to resize the note</sys:String>
     <sys:String x:Key="RenameNoteTitle">Rename note</sys:String>
-    <sys:String x:Key="RenameNoteHint">Right-click the title bar or press F2 to rename this note</sys:String>
+    <sys:String x:Key="RenameNoteHint">Drag to move · double-click or press F2 to rename</sys:String>
     <sys:String x:Key="RenameNoteDescription">Give this note a name (up to 80 characters). Leave it blank to restore the default name.</sys:String>
     <sys:String x:Key="RenameNoteLabel">Note name</sys:String>
     <sys:String x:Key="SettingsTitle">Settings</sys:String>
-    <sys:String x:Key="SettingsSubtitle">Defaults for new notes and app startup.</sys:String>
+    <sys:String x:Key="SettingsSubtitle">Make room for the way you work.</sys:String>
     <sys:String x:Key="SettingLanguage">Language</sys:String>
     <sys:String x:Key="SettingDefaultColor">Default color</sys:String>
     <sys:String x:Key="SettingFontSize">Font size</sys:String>
     <sys:String x:Key="SettingStartWithWindows">Start with Windows</sys:String>
     <sys:String x:Key="SettingDefaultTopmost">Default topmost</sys:String>
-    <sys:String x:Key="SettingKeepAfterWinD">Keep after Win+D</sys:String>
+    <sys:String x:Key="SettingKeepAfterWinD">Keep notes after Show Desktop</sys:String>
     <sys:String x:Key="SettingAutoSave">Auto-save</sys:String>
     <sys:String x:Key="SettingVersion">Version</sys:String>
     <sys:String x:Key="ButtonCancel">Cancel</sys:String>
@@ -124,4 +127,34 @@
     <sys:String x:Key="ColorBlue">Blue</sys:String>
     <sys:String x:Key="ColorPink">Pink</sys:String>
     <sys:String x:Key="ColorWhite">White</sys:String>
+    <sys:String x:Key="SettingsAppearanceTitle">Notes &amp; text</sys:String>
+    <sys:String x:Key="SettingsDefaultsHint">Color and pinning apply to new notes. Font size applies to all notes.</sys:String>
+    <sys:String x:Key="SettingsDesktopTitle">Desktop &amp; startup</sys:String>
+    <sys:String x:Key="SettingsSaveTitle">Saving</sys:String>
+    <sys:String x:Key="SettingsPreviewTitle">Preview</sys:String>
+    <sys:String x:Key="SettingsPreviewText">Keep a thought close. Focus on one thing at a time.</sys:String>
+    <sys:String x:Key="SettingsTopmostHint">Keep new notes above other app windows.</sys:String>
+    <sys:String x:Key="SettingsStartupHint">Restore your notes when you sign in to Windows.</sys:String>
+    <sys:String x:Key="SettingsDesktopHint">Try to keep notes visible after Show Desktop.</sys:String>
+    <sys:String x:Key="SettingsSecondsUnit">seconds</sys:String>
+    <sys:String x:Key="SettingsStorageHint">Content and window positions are saved automatically.</sys:String>
+    <sys:String x:Key="SettingsLocalLabel">Notes stay on this device</sys:String>
+    <sys:String x:Key="SettingsSaveButton">Save settings</sys:String>
+    <sys:String x:Key="TrayOpenHint">Double-click: show notes · Right-click: menu</sys:String>
+    <sys:String x:Key="TrayStatusFormat">{0} notes · {1} visible</sys:String>
+    <sys:String x:Key="TrayToggleShow">Click to show this note</sys:String>
+    <sys:String x:Key="TrayToggleHide">Click to hide this note</sys:String>
+    <sys:String x:Key="TipNoteMenu">More: rename, minimize, and delete</sys:String>
+    <sys:String x:Key="LanguageAuto">System default</sys:String>
+    <sys:String x:Key="SettingsHotkeysTitle">Global shortcuts</sys:String>
+    <sys:String x:Key="SettingNewNoteHotkey">Create a note</sys:String>
+    <sys:String x:Key="SettingNextNoteHotkey">Switch to the next note</sys:String>
+    <sys:String x:Key="HotkeyCaptureHint">Click a field and press a key combination. Shortcuts pause while you edit. Clear a field to disable it.</sys:String>
+    <sys:String x:Key="HotkeyCycleHint">Cycles through your notes, including hidden, minimized, and collapsed notes.</sys:String>
+    <sys:String x:Key="HotkeyClear">Clear</sys:String>
+    <sys:String x:Key="HotkeyReset">Reset</sys:String>
+    <sys:String x:Key="HotkeyNotSet">Not set — press a shortcut</sys:String>
+    <sys:String x:Key="HotkeyInvalid">Use Ctrl, Alt, or Win together with another key.</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">Choose different shortcuts for creating and switching notes.</sys:String>
+    <sys:String x:Key="HotkeyUnavailable">{0} is unavailable or used by another app. Choose another combination in Settings.</sys:String>
 </ResourceDictionary>

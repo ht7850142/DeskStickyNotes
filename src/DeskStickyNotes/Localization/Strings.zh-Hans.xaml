@@ -17,7 +17,10 @@
     <sys:String x:Key="TrayNoteHidden">已隐藏</sys:String>
 
     <sys:String x:Key="TipChangeColor">调整便签外观</sys:String>
-    <sys:String x:Key="TipAlwaysOnTop">置顶显示</sys:String>
+    <sys:String x:Key="TipAlwaysOnTop">置顶到其他应用上方</sys:String>
+    <sys:String x:Key="TipUnpinNote">已置顶 · 点击取消置顶</sys:String>
+    <sys:String x:Key="NoteEditorName">便签内容</sys:String>
+    <sys:String x:Key="EmptyNoteHint">记下想法、列个待办，或拖入文本文件…</sys:String>
     <sys:String x:Key="TipCollapseNote">折叠为图标</sys:String>
     <sys:String x:Key="TipRestoreNote">点击还原，拖动移动</sys:String>
     <sys:String x:Key="TipHideNote">最小化到任务栏</sys:String>
@@ -100,17 +103,17 @@
 
     <sys:String x:Key="TipResizeNote">拖动便签边缘或四角调整大小</sys:String>
     <sys:String x:Key="RenameNoteTitle">重命名便签</sys:String>
-    <sys:String x:Key="RenameNoteHint">右键标题栏或按 F2 可重命名此便签</sys:String>
+    <sys:String x:Key="RenameNoteHint">拖动可移动 · 双击或按 F2 可改名</sys:String>
     <sys:String x:Key="RenameNoteDescription">为此便签设置名称，最多 80 个字符。留空可恢复默认名称。</sys:String>
     <sys:String x:Key="RenameNoteLabel">便签名称</sys:String>
     <sys:String x:Key="SettingsTitle">设置</sys:String>
-    <sys:String x:Key="SettingsSubtitle">新便签默认值和应用启动行为。</sys:String>
+    <sys:String x:Key="SettingsSubtitle">让便签按你的习惯工作。</sys:String>
     <sys:String x:Key="SettingLanguage">语言</sys:String>
     <sys:String x:Key="SettingDefaultColor">默认颜色</sys:String>
     <sys:String x:Key="SettingFontSize">字体大小</sys:String>
     <sys:String x:Key="SettingStartWithWindows">开机自启</sys:String>
     <sys:String x:Key="SettingDefaultTopmost">默认置顶</sys:String>
-    <sys:String x:Key="SettingKeepAfterWinD">Win+D 后保持</sys:String>
+    <sys:String x:Key="SettingKeepAfterWinD">显示桌面后保留便签</sys:String>
     <sys:String x:Key="SettingAutoSave">自动保存</sys:String>
     <sys:String x:Key="SettingVersion">版本</sys:String>
     <sys:String x:Key="ButtonCancel">取消</sys:String>
@@ -124,4 +127,34 @@
     <sys:String x:Key="ColorBlue">浅蓝</sys:String>
     <sys:String x:Key="ColorPink">浅粉</sys:String>
     <sys:String x:Key="ColorWhite">白色</sys:String>
+    <sys:String x:Key="SettingsAppearanceTitle">新便签与文字</sys:String>
+    <sys:String x:Key="SettingsDefaultsHint">颜色与置顶用于新便签；字号应用到所有便签。</sys:String>
+    <sys:String x:Key="SettingsDesktopTitle">桌面与启动</sys:String>
+    <sys:String x:Key="SettingsSaveTitle">保存</sys:String>
+    <sys:String x:Key="SettingsPreviewTitle">外观预览</sys:String>
+    <sys:String x:Key="SettingsPreviewText">把想法留在手边，专注眼前的一件事。</sys:String>
+    <sys:String x:Key="SettingsTopmostHint">让新便签保持在其他应用窗口上方。</sys:String>
+    <sys:String x:Key="SettingsStartupHint">登录 Windows 时自动恢复便签。</sys:String>
+    <sys:String x:Key="SettingsDesktopHint">显示桌面后尝试恢复便签，具体效果取决于 Windows。</sys:String>
+    <sys:String x:Key="SettingsSecondsUnit">秒</sys:String>
+    <sys:String x:Key="SettingsStorageHint">自动保存内容和窗口位置，无需手动保存便签。</sys:String>
+    <sys:String x:Key="SettingsLocalLabel">便签仅保存在此设备</sys:String>
+    <sys:String x:Key="SettingsSaveButton">保存设置</sys:String>
+    <sys:String x:Key="TrayOpenHint">双击显示便签，右键打开菜单</sys:String>
+    <sys:String x:Key="TrayStatusFormat">{0} 张便签 · {1} 张可见</sys:String>
+    <sys:String x:Key="TrayToggleShow">点击显示此便签</sys:String>
+    <sys:String x:Key="TrayToggleHide">点击隐藏此便签</sys:String>
+    <sys:String x:Key="TipNoteMenu">更多：改名、最小化和删除</sys:String>
+    <sys:String x:Key="LanguageAuto">跟随系统</sys:String>
+    <sys:String x:Key="SettingsHotkeysTitle">全局快捷键</sys:String>
+    <sys:String x:Key="SettingNewNoteHotkey">快速新建便签</sys:String>
+    <sys:String x:Key="SettingNextNoteHotkey">切换到下一张便签</sys:String>
+    <sys:String x:Key="HotkeyCaptureHint">点击输入框后按组合键。录入时暂停全局触发；清空可禁用该快捷键。</sys:String>
+    <sys:String x:Key="HotkeyCycleHint">循环切换所有便签，也会展开隐藏、最小化或折叠的目标便签。</sys:String>
+    <sys:String x:Key="HotkeyClear">清除</sys:String>
+    <sys:String x:Key="HotkeyReset">恢复默认</sys:String>
+    <sys:String x:Key="HotkeyNotSet">未设置，请按快捷键</sys:String>
+    <sys:String x:Key="HotkeyInvalid">请使用 Ctrl、Alt 或 Win 搭配其他按键。</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">新建与切换便签不能使用相同的快捷键。</sys:String>
+    <sys:String x:Key="HotkeyUnavailable">{0} 无法使用或已被其他应用占用，请在设置中选择其他组合键。</sys:String>
 </ResourceDictionary>

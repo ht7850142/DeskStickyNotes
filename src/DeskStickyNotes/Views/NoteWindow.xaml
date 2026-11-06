@@ -13,8 +13,10 @@
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip"
         AllowsTransparency="True"
+        ShowActivated="False"
+        UseLayoutRounding="True"
         ShowInTaskbar="False"
-        Topmost="{Binding Topmost}"
+        Topmost="{Binding Topmost, Mode=OneWay}"
         Background="Transparent"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
@@ -40,10 +42,10 @@
             SnapsToDevicePixels="True">
         <Border.Effect>
             <DropShadowEffect x:Name="WindowChromeShadow"
-                              BlurRadius="18"
+                              BlurRadius="16"
                               ShadowDepth="2"
                               Direction="270"
-                              Opacity="0.22"
+                              Opacity="0.16"
                               Color="#111827" />
         </Border.Effect>
 
@@ -68,12 +70,12 @@
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"
                        RenderOptions.BitmapScalingMode="HighQuality"
-                       Source="pack://application:,,,/Assets/AppIcon.png" />
+                       Source="{StaticResource AppMark}" />
             </Border>
 
             <Grid x:Name="ExpandedContent">
             <Grid.RowDefinitions>
-                <RowDefinition Height="38" />
+                <RowDefinition Height="42" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
@@ -89,7 +91,7 @@
                         <MenuItem Header="{DynamicResource RenameNoteTitle}" InputGestureText="F2" Click="RenameNote_Click" />
                     </ContextMenu>
                 </Border.ContextMenu>
-                <DockPanel Margin="10,5,8,5" LastChildFill="True">
+                <DockPanel Margin="10,7,8,7" LastChildFill="True">
                     <StackPanel DockPanel.Dock="Right"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center">
@@ -110,8 +112,7 @@
                                 </Border.Effect>
                             </Border>
                         </Button>
-                        <Button ToolTip="{DynamicResource TipAlwaysOnTop}"
-                                Style="{StaticResource TopmostButtonStyle}"
+                        <Button Style="{StaticResource TopmostButtonStyle}"
                                 Command="{Binding ToggleTopmostCommand}">
                             <Path Width="15"
                                   Height="15"
@@ -119,23 +120,20 @@
                                   Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                                   Data="M16,2H8V4H9V11.2L7,13.2V15H11.2V22H12.8V15H17V13.2L15,11.2V4H16V2Z" />
                         </Button>
-                        <Button Content="&#x25A1;"
-                                ToolTip="{DynamicResource TipCollapseNote}"
+                        <Button ToolTip="{DynamicResource TipCollapseNote}"
                                 Style="{StaticResource IconButtonStyle}"
-                                Click="CollapseButton_Click" />
-                        <Button Content="&#x2212;"
-                                ToolTip="{DynamicResource TipHideNote}"
-                                Style="{StaticResource IconButtonStyle}"
-                                Command="{Binding HideCommand}" />
-                        <Button Content="&#x00D7;"
-                                ToolTip="{DynamicResource TipDeleteNote}"
-                                Style="{StaticResource DangerIconButtonStyle}"
-                                Command="{Binding DeleteCommand}" />
+                                Click="CollapseButton_Click">
+                            <Path Width="14" Height="14" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M3,1H15V13H3Z M7,5H12V10 M12,5L6,11" />
+                        </Button>
+                        <Button ToolTip="{DynamicResource TipNoteMenu}"
+                                Style="{StaticResource IconButtonStyle}" Click="NoteMenuButton_Click">
+                            <Path Width="16" Height="4" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  Data="M1,2A1.5,1.5 0 1 0 4,2A1.5,1.5 0 1 0 1,2 M7,2A1.5,1.5 0 1 0 10,2A1.5,1.5 0 1 0 7,2 M13,2A1.5,1.5 0 1 0 16,2A1.5,1.5 0 1 0 13,2" />
+                        </Button>
                     </StackPanel>
 
                     <DockPanel VerticalAlignment="Center">
-                        <Button Content="+"
-                                DockPanel.Dock="Left"
+                        <Button DockPanel.Dock="Left"
                                 Width="24"
                                 Height="28"
                                 Margin="0,0,5,0"
@@ -143,136 +141,136 @@
                                 FontWeight="SemiBold"
                                 ToolTip="{DynamicResource TrayNewNote}"
                                 Style="{StaticResource IconButtonStyle}"
-                                Command="{Binding NewNoteCommand}" />
-                        <Border Width="6"
+                                Command="{Binding NewNoteCommand}">
+                            <Path Width="14" Height="14" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6" Data="M0,7H14 M7,0V14" />
+                        </Button>
+                        <Border Width="1"
                                 DockPanel.Dock="Left"
-                                Height="18"
-                                Margin="0,0,8,0"
+                                Height="16"
+                                Margin="1,0,10,0"
                                 CornerRadius="3"
-                                Background="#55FFFFFF" />
+                                Background="#28454C45" />
                         <TextBlock x:Name="NoteTitleText"
                                    Text="{DynamicResource NoteTitle}"
                                    TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center"
-                                   Foreground="#5F4B24"
-                                   FontSize="12"
+                                   Foreground="{StaticResource NoteControlBrush}"
+                                   FontSize="13"
                                    FontWeight="SemiBold" />
                     </DockPanel>
                 </DockPanel>
             </Border>
 
             <Border Grid.Row="1"
-                    MinHeight="32"
-                    Background="#24FFFFFF">
-                <DockPanel Margin="9,3,9,4">
+                    MinHeight="38"
+                    Background="#38FFFFFF"
+                    BorderBrush="#14000000" BorderThickness="0,0,0,1">
+                <DockPanel Margin="10,4,10,4">
                     <WrapPanel x:Name="EditorToolbar"
                                 Orientation="Horizontal"
-                                VerticalAlignment="Center">
-                        <Button Content="B"
-                                ToolTip="{DynamicResource TipBold}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Bold" />
-                        <Button Content="I"
-                                FontStyle="Italic"
-                                ToolTip="{DynamicResource TipItalic}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Italic" />
-                        <Button ToolTip="{DynamicResource TipUnderline}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Underline">
-                            <TextBlock Text="U" TextDecorations="Underline" />
-                        </Button>
-                        <Button ToolTip="{DynamicResource TipStrikethrough}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Strike">
-                            <TextBlock Text="S" TextDecorations="Strikethrough" />
-                        </Button>
-                        <Rectangle Width="1"
-                                   Height="18"
-                                   Margin="4,0,3,0"
-                                   Fill="#22000000" />
-                        <Button Content="•"
-                                ToolTip="{DynamicResource TipBulletList}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Bullet" />
-                        <Button Content="1."
-                                ToolTip="{DynamicResource TipNumberList}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Number" />
-                        <Button Content="☐"
-                                ToolTip="{DynamicResource TipTodo}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="Todo" />
-                        <Rectangle Width="1"
-                                   Height="18"
-                                   Margin="4,0,3,0"
-                                   Fill="#22000000" />
-                        <Button Content="&#x1F517;"
-                                ToolTip="{DynamicResource TipHyperlink}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="HyperlinkButton_Click"
-                                FontFamily="Segoe UI Emoji, Segoe UI Symbol" />
-                        <Button ToolTip="{DynamicResource TipTextClip}"
-                                AutomationProperties.Name="{DynamicResource TipTextClip}"
-                                Focusable="True"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="TextClipButton_Click">
-                            <Viewbox Width="14" Height="14">
-                                <Path Fill="Transparent"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      StrokeThickness="1.6"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"
-                                      Data="M4,1H11L15,5V17H4V1ZM11,1V5H15M6.5,9H12.5M6.5,12H12.5M6.5,15H10.5" />
-                            </Viewbox>
-                        </Button>
-                        <Button Content="H"
-                                ToolTip="{DynamicResource TipHeadingStyle}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="HeadingButton_Click"
-                                FontWeight="Bold" />
-                        <Rectangle Width="1"
-                                   Height="18"
-                                   Margin="4,0,3,0"
-                                   Fill="#22000000" />
-                        <Button ToolTip="{DynamicResource TipAlignLeft}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="AlignLeft">
-                            <Grid Width="14" Height="14">
-                                <Rectangle Width="14" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0" />
-                                <Rectangle Width="10" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,6,0,0" />
-                                <Rectangle Width="13" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,10,0,0" />
-                            </Grid>
-                        </Button>
-                        <Button ToolTip="{DynamicResource TipAlignCenter}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="AlignCenter">
-                            <Grid Width="14" Height="14">
-                                <Rectangle Width="14" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0" />
-                                <Rectangle Width="10" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0" />
-                                <Rectangle Width="13" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" />
-                            </Grid>
-                        </Button>
-                        <Button ToolTip="{DynamicResource TipAlignRight}"
-                                Style="{StaticResource EditorToolButtonStyle}"
-                                Click="EditorToolButton_Click"
-                                Tag="AlignRight">
-                            <Grid Width="14" Height="14">
-                                <Rectangle Width="14" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,0,0" />
-                                <Rectangle Width="10" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,0,0" />
-                                <Rectangle Width="13" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,0,0" />
-                            </Grid>
-                        </Button>
+                                VerticalAlignment="Center"
+                                KeyboardNavigation.TabNavigation="Continue">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
+                            <Button Content="B"
+                                    ToolTip="{DynamicResource TipBold}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Bold" />
+                            <Button Content="I"
+                                    FontStyle="Italic"
+                                    ToolTip="{DynamicResource TipItalic}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Italic" />
+                            <Button ToolTip="{DynamicResource TipUnderline}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Underline">
+                                <TextBlock Text="U" TextDecorations="Underline" />
+                            </Button>
+                            <Button ToolTip="{DynamicResource TipStrikethrough}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Strike">
+                                <TextBlock Text="S" TextDecorations="Strikethrough" />
+                            </Button>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
+                            <Button Content="•"
+                                    ToolTip="{DynamicResource TipBulletList}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Bullet" />
+                            <Button Content="1."
+                                    ToolTip="{DynamicResource TipNumberList}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Number" />
+                            <Button Content="☐"
+                                    ToolTip="{DynamicResource TipTodo}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="Todo" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
+                            <Button ToolTip="{DynamicResource TipHyperlink}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="HyperlinkButton_Click">
+                                <Path Width="15" Height="15" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M7,10L11,6 M6,7L4,9C1,12 5,16 8,13L10,11 M8,5L10,3C13,0 17,4 14,7L12,9" />
+                            </Button>
+                            <Button ToolTip="{DynamicResource TipTextClip}"
+                                    AutomationProperties.Name="{DynamicResource TipTextClip}"
+                                    Focusable="True"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="TextClipButton_Click">
+                                <Viewbox Width="14" Height="14">
+                                    <Path Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.6"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="M4,1H11L15,5V17H4V1ZM11,1V5H15M6.5,9H12.5M6.5,12H12.5M6.5,15H10.5" />
+                                </Viewbox>
+                            </Button>
+                            <Button Content="H"
+                                    ToolTip="{DynamicResource TipHeadingStyle}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="HeadingButton_Click"
+                                    FontWeight="Bold" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0">
+                            <Button ToolTip="{DynamicResource TipAlignLeft}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="AlignLeft">
+                                <Grid Width="14" Height="14">
+                                    <Rectangle Width="14" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                    <Rectangle Width="10" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,6,0,0" />
+                                    <Rectangle Width="13" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,10,0,0" />
+                                </Grid>
+                            </Button>
+                            <Button ToolTip="{DynamicResource TipAlignCenter}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="AlignCenter">
+                                <Grid Width="14" Height="14">
+                                    <Rectangle Width="14" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                    <Rectangle Width="10" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,6,0,0" />
+                                    <Rectangle Width="13" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" />
+                                </Grid>
+                            </Button>
+                            <Button ToolTip="{DynamicResource TipAlignRight}"
+                                    Style="{StaticResource EditorToolButtonStyle}"
+                                    Click="EditorToolButton_Click"
+                                    Tag="AlignRight">
+                                <Grid Width="14" Height="14">
+                                    <Rectangle Width="14" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                    <Rectangle Width="10" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,0,0" />
+                                    <Rectangle Width="13" Height="1.6" RadiusX="0.8" RadiusY="0.8" Fill="#344054" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,0,0" />
+                                </Grid>
+                            </Button>
+                        </StackPanel>
                     </WrapPanel>
                 </DockPanel>
             </Border>
@@ -280,7 +278,7 @@
             <Grid Grid.Row="2">
                 <RichTextBox x:Name="Editor"
                              FontSize="{Binding FontSize}"
-                             FontFamily="Segoe UI, Microsoft YaHei UI"
+                             FontFamily="{DynamicResource UiFontFamily}"
                              Foreground="{Binding TextForegroundHex}"
                              CaretBrush="#2563EB"
                              SelectionBrush="#93C5FD"
@@ -290,9 +288,11 @@
                              AllowDrop="True"
                              AcceptsTab="True"
                              IsDocumentEnabled="True"
-                             VerticalScrollBarVisibility="Hidden"
+                             VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Disabled"
                              PreviewKeyDown="Editor_PreviewKeyDown"
+                             AutomationProperties.Name="{DynamicResource NoteEditorName}"
+                             SelectionChanged="Editor_SelectionChanged"
                              TextChanged="Editor_TextChanged">
                     <RichTextBox.Resources>
                         <Style TargetType="Paragraph">
@@ -301,6 +301,11 @@
                         </Style>
                     </RichTextBox.Resources>
                 </RichTextBox>
+
+                <TextBlock x:Name="EmptyNoteHint" Margin="17,14,30,0"
+                           VerticalAlignment="Top" IsHitTestVisible="False"
+                           Text="{DynamicResource EmptyNoteHint}" TextWrapping="Wrap"
+                           Foreground="{Binding TextForegroundHex}" Opacity="0.72" FontSize="14" />
 
                 <Border x:Name="TextFileDropOverlay"
                         Margin="8"
@@ -358,10 +363,9 @@
                       HorizontalAlignment="Right"
                       VerticalAlignment="Bottom"
                       IsHitTestVisible="False"
-                      Stroke="{Binding TextForegroundHex}"
-                      StrokeThickness="1.5"
-                      Opacity="0.4"
-                      Data="M0,12 L12,0 M5,12 L12,5 M10,12 L12,10" />
+                      Fill="{Binding TextForegroundHex}"
+                      Opacity="0.35"
+                      Data="M9,1A1,1 0 1 0 11,1A1,1 0 1 0 9,1 M5,5A1,1 0 1 0 7,5A1,1 0 1 0 5,5 M9,5A1,1 0 1 0 11,5A1,1 0 1 0 9,5 M1,9A1,1 0 1 0 3,9A1,1 0 1 0 1,9 M5,9A1,1 0 1 0 7,9A1,1 0 1 0 5,9 M9,9A1,1 0 1 0 11,9A1,1 0 1 0 9,9" />
             </Grid>
             </Grid>
 

@@ -46,11 +46,12 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 ## Features
 
 - Multiple independent sticky-note windows
-- Rename each note from its title-bar/icon context menu or with F2; names are saved automatically
+- Rename each note by double-clicking its title bar, using its title-bar/icon context menu, or pressing F2; names are saved automatically
 - Right-click the tray icon to browse all notes by name and show or hide each note independently
 - No taskbar button for normal note windows
 - System tray menu: New Note, Show All Notes, Hide All Notes, Settings, Exit
 - Double-click tray icon to show existing notes
+- Customizable global shortcuts to create a note and cycle through all notes, including hidden, minimized, and collapsed notes
 - Auto-save note content, position, size, color, transparency, text color, visibility, and topmost state
 - Per-note background opacity with Auto, Dark, and Light text color modes
 - Rich text editing: bold, italic, underline, strikethrough, bullets, numbering, todo items, headings, alignment, and hyperlinks
@@ -61,13 +62,21 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 - Per-note always-on-top
 - Collapse a note into a small draggable icon
 - Resize notes by dragging any edge or corner; custom sizes are saved even for empty notes
-- Compact notes down to 300 × 180 with a wrapping toolbar; restore collapsed notes with Enter or Space
+- Compact notes down to 300 × 180 with grouped, wrapping tools, current-format indicators, and keyboard access
+- Click the title bar to keep editing, drag to move, and use the dedicated collapse button; expansion preserves the saved pin preference
+- Empty-note guidance and scrollbars for overflowing content; restore collapsed notes with Enter or Space
 - Expanding an icon near a screen edge keeps the note inside that monitor's available work area
 - Optional "Keep after Win+D" best-effort behavior
 - Light Windows 11-friendly note and settings UI
-- Simplified Chinese and English UI, plus Auto language detection
+- Simplified Chinese, Traditional Chinese, English, French, Spanish, Portuguese, and Japanese UI, plus Auto language detection
 - Start with Windows through `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
 - Local JSON storage under `%AppData%\DeskStickyNotes`
+
+### Global shortcuts
+
+The default shortcuts are `Ctrl+Alt+N` to create a note and `Ctrl+Alt+PageDown` to switch to the next note. Cycling follows note creation order and reveals hidden, minimized, and collapsed notes.
+
+Open **Settings → Global shortcuts**, click a shortcut field, and press the desired combination. Use Ctrl, Alt, or Win with another key; Shift is optional. Clear a field to disable that shortcut, or choose Reset to restore both defaults. Shortcuts pause while a field is recording. Save checks for duplicate or occupied combinations and keeps the previous working shortcuts if a replacement is unavailable.
 
 ### Text slices
 
@@ -79,7 +88,7 @@ Windows 11 Sticky Notes behaves like a regular app window and does not provide t
 
 ## Download
 
-For end users, download [DeskStickyNotes 0.4.0 from GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.4.0).
+For end users, download [DeskStickyNotes 0.6.0 from GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0).
 
 | Package | Use when |
 | --- | --- |
@@ -158,11 +167,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Current package names:
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.4.0-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.4.0-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.4.0-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.4.0-runtime.exe
-artifacts\installer\DeskStickyNotes-0.4.0-SHA256SUMS.txt
+artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.6.0-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.6.0-runtime.exe
+artifacts\installer\DeskStickyNotes-0.6.0-SHA256SUMS.txt
 ```
 
 The packaging script downloads and verifies the Microsoft runtime installer automatically when it is missing:
@@ -196,10 +205,10 @@ There is no account system, sync service, telemetry, analytics, or network featu
 DeskStickyNotes.sln   Visual Studio / dotnet solution
 src/DeskStickyNotes/   WPF app source code
   Models/             Data models and note palette
-  Services/           Storage, tray, startup, and localization services
+  Services/           Storage, tray, hotkeys, desktop recovery, startup, and localization
   ViewModels/         MVVM view models and commands
   Views/              WPF windows
-  Localization/       English and Simplified Chinese resources
+  Localization/       Complete resources for seven UI languages
   Assets/             App icon files
 installer/            Inno Setup script and installer image
 scripts/              Packaging script

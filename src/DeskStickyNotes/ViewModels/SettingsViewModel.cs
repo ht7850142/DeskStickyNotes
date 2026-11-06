@@ -10,6 +10,7 @@ public sealed record ColorChoice(string Code, string DisplayName, string SwatchH
 public sealed class SettingsViewModel : ObservableObject
 {
     private readonly Action<AppSettings> _saveSettings;
+    private readonly Func<AppSettings, string?>? _validateHotkeys;
     private string _language;
     private string _defaultColor;
     private double _defaultFontSize;
@@ -17,13 +18,19 @@ public sealed class SettingsViewModel : ObservableObject
     private bool _defaultTopmost;
     private bool _keepNotesVisibleAfterShowDesktop;
     private double _autoSaveIntervalSeconds;
+    private string _newNoteHotkey;
+    private string _nextNoteHotkey;
+    private string _validationError = "";
 
     public SettingsViewModel(
         AppSettings settings,
-        Action<AppSettings> saveSettings)
+        Action<AppSettings> saveSettings,
+        Func<AppSettings, string?>? validateHotkeys = null)
     {
         _saveSettings = saveSettings;
-        AvailableLanguages = LocalizationService.AvailableLanguages;
+        _validateHotkeys = validateHotkeys;
+        AvailableLanguages = LocalizationService.AvailableLanguages.Select(option => option.Code == LocalizationService.AutoLanguage
+            ? new LanguageOption(option.Code, LocalizationService.Get("LanguageAuto")) : option).ToArray();
         AvailableColors = NotePalette.Names
             .Select(color => new ColorChoice(
                 color,
@@ -37,9 +44,14 @@ public sealed class SettingsViewModel : ObservableObject
         _defaultTopmost = settings.DefaultTopmost;
         _keepNotesVisibleAfterShowDesktop = settings.KeepNotesVisibleAfterShowDesktop;
         _autoSaveIntervalSeconds = settings.AutoSaveIntervalSeconds;
+        _newNoteHotkey = settings.NewNoteHotkey ?? HotkeyGesture.DefaultNewNote;
+        _nextNoteHotkey = settings.NextNoteHotkey ?? HotkeyGesture.DefaultNextNote;
 
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
+        ClearNewNoteHotkeyCommand = new RelayCommand(() => NewNoteHotkey = "");
+        ClearNextNoteHotkeyCommand = new RelayCommand(() => NextNoteHotkey = "");
+        ResetHotkeysCommand = new RelayCommand(() => { NewNoteHotkey = HotkeyGesture.DefaultNewNote; NextNoteHotkey = HotkeyGesture.DefaultNextNote; });
     }
 
     public event EventHandler? CloseRequested;
@@ -48,10 +60,10 @@ public sealed class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<ColorChoice> AvailableColors { get; }
 
-    public string AppVersion { get; } =
+    public string AppVersion { get; } = (
         typeof(SettingsViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
         ?? typeof(SettingsViewModel).Assembly.GetName().Version?.ToString()
-        ?? "0.0.0";
+        ?? "0.0.0").Split('+')[0];
 
     public string Language
     {
@@ -62,8 +74,16 @@ public sealed class SettingsViewModel : ObservableObject
     public string DefaultColor
     {
         get => _defaultColor;
-        set => SetProperty(ref _defaultColor, NotePalette.Normalize(value));
+        set
+        {
+            if (!SetProperty(ref _defaultColor, NotePalette.Normalize(value))) return;
+            OnPropertyChanged(nameof(PreviewBackground));
+            OnPropertyChanged(nameof(PreviewHeader));
+        }
     }
+
+    public string PreviewBackground => NotePalette.Get(DefaultColor).Background;
+    public string PreviewHeader => NotePalette.Get(DefaultColor).Header;
 
     public double DefaultFontSize
     {
@@ -99,9 +119,31 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand CancelCommand { get; }
 
+    public ICommand ClearNewNoteHotkeyCommand { get; }
+    public ICommand ClearNextNoteHotkeyCommand { get; }
+    public ICommand ResetHotkeysCommand { get; }
+
+    public string NewNoteHotkey
+    {
+        get => _newNoteHotkey;
+        set { if (SetProperty(ref _newNoteHotkey, value)) SetHotkeyError(""); }
+    }
+    public string NextNoteHotkey
+    {
+        get => _nextNoteHotkey;
+        set { if (SetProperty(ref _nextNoteHotkey, value)) SetHotkeyError(""); }
+    }
+    public string ValidationError => _validationError;
+    public bool HasValidationError => !string.IsNullOrEmpty(_validationError);
+    internal void SetHotkeyError(string message)
+    {
+        if (!SetProperty(ref _validationError, message, nameof(ValidationError))) return;
+        OnPropertyChanged(nameof(HasValidationError));
+    }
+
     private void Save()
     {
-        _saveSettings(new AppSettings
+        var settings = new AppSettings
         {
             Language = Language,
             DefaultColor = DefaultColor,
@@ -109,8 +151,16 @@ public sealed class SettingsViewModel : ObservableObject
             StartWithWindows = StartWithWindows,
             DefaultTopmost = DefaultTopmost,
             KeepNotesVisibleAfterShowDesktop = KeepNotesVisibleAfterShowDesktop,
-            AutoSaveIntervalSeconds = (int)Math.Round(AutoSaveIntervalSeconds)
-        });
+            AutoSaveIntervalSeconds = (int)Math.Round(AutoSaveIntervalSeconds),
+            NewNoteHotkey = NewNoteHotkey,
+            NextNoteHotkey = NextNoteHotkey
+        };
+        if (_validateHotkeys?.Invoke(settings) is { } error)
+        {
+            SetHotkeyError(error);
+            return;
+        }
+        _saveSettings(settings);
 
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }

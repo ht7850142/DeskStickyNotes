@@ -46,11 +46,12 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 ## 功能
 
 - 多个独立便签窗口
-- 右键标题栏/折叠图标或按 F2，分别为每个便签改名，名称自动保存
+- 双击标题栏、右键标题栏/折叠图标或按 F2，分别为每个便签改名，名称自动保存
 - 右键右下角托盘图标，查看便签列表及显示状态，分别选择显示或隐藏
 - 普通便签不显示任务栏按钮
 - 系统托盘菜单：新建、显示全部、隐藏全部、设置、退出
 - 双击托盘图标显示已有便签
+- 自定义全局快捷键，快速新建和依次切换便签，隐藏、最小化或折叠的便签也可直接唤出
 - 自动保存内容、位置、大小、颜色、透明度、文字颜色、显示状态和置顶状态
 - 单个便签可调整背景透明度，并支持自动、深色和浅色文字
 - 富文本：加粗、斜体、下划线、删除线、列表、待办、标题、对齐、超链接
@@ -61,12 +62,20 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 - 单个便签可置顶
 - 可折叠成可拖动的小图标
 - 拖动便签四边或四角调整大小，空白便签也会记住调整后的尺寸
-- 可缩小到 300 × 180，工具栏自动换行；折叠后也可按 Enter 或空格展开
+- 可缩小到 300 × 180，工具栏按功能分组换行，显示当前文字格式，支持键盘操作
+- 单击标题栏保持展开，拖动可移动；使用独立按钮折叠，展开后保留原有置顶设置
+- 空白便签提供输入提示，长便签按需显示滚动条；折叠后也可按 Enter 或空格展开
 - 图标在屏幕边缘展开时，自动调整位置以保持便签位于当前显示器的可用区域内
 - 可选的 Win+D 后保持显示机制
-- 中文和英文界面，支持自动识别语言
+- 简体中文、繁体中文、英语、法语、西班牙语、葡萄牙语和日语界面，支持自动识别系统语言
 - 支持开机自启
 - 数据保存在 `%AppData%\DeskStickyNotes`
+
+### 全局快捷键
+
+默认按 `Ctrl+Alt+N` 新建便签，按 `Ctrl+Alt+PageDown` 切换到下一张便签。切换按创建顺序循环，会自动显示隐藏、最小化或折叠的目标便签。
+
+打开**设置 → 全局快捷键**，点击输入框后直接按下想用的组合键。组合中须包含 Ctrl、Alt 或 Win，可再加 Shift。清空输入框即可停用该快捷键，点击“恢复默认”可还原两组默认值。录入时会暂停全局快捷键；保存时检查重复和占用，若新组合不可用，原来可用的快捷键仍会保留。
 
 ### 文本切片
 
@@ -78,7 +87,7 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 
 ## 下载安装
 
-从 [GitHub Releases 下载 DeskStickyNotes 0.4.0](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.4.0)。
+从 [GitHub Releases 下载 DeskStickyNotes 0.6.0](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0)。
 
 | 包 | 适合场景 |
 | --- | --- |
@@ -142,11 +151,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 当前输出：
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.4.0-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.4.0-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.4.0-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.4.0-runtime.exe
-artifacts\installer\DeskStickyNotes-0.4.0-SHA256SUMS.txt
+artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.6.0-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.6.0-runtime.exe
+artifacts\installer\DeskStickyNotes-0.6.0-SHA256SUMS.txt
 ```
 
 生成内置运行时的安装包时，打包脚本会自动下载并校验缺失的运行时安装器：
@@ -165,10 +174,10 @@ windowsdesktop-runtime-8.0.31-win-x64.exe
 DeskStickyNotes.sln   Visual Studio / dotnet 解决方案
 src/DeskStickyNotes/   WPF 应用源码
   Models/             数据模型和便签颜色
-  Services/           存储、托盘、自启和多语言服务
+  Services/           存储、托盘、快捷键、桌面恢复、自启和多语言服务
   ViewModels/         MVVM 视图模型和命令
   Views/              WPF 窗口
-  Localization/       英文和简体中文资源
+  Localization/       七种界面的完整语言资源
   Assets/             应用图标
 installer/            Inno Setup 安装脚本和安装器图片
 scripts/              打包脚本

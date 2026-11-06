@@ -6,6 +6,26 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-06
+
+- Added customizable global shortcuts for creating a note and cycling through notes, including hidden, minimized, and collapsed notes. Defaults are Ctrl+Alt+N and Ctrl+Alt+PageDown.
+- Added keyboard shortcut recording, clear/disable and reset actions, duplicate detection, and native registration conflict messages. Replacing shortcuts preserves the previous working bindings if a new combination is unavailable.
+- Added complete French, Spanish, Portuguese, Japanese, and Traditional Chinese interfaces, including tray actions, settings, editor hints, and dialogs.
+- Added regional system-language detection, language-appropriate UI fonts, and live language switching without restarting.
+- Added regression coverage for shortcut transactions, native RegisterHotKey conflicts and callbacks, note navigation, settings migration, all translation keys, and localized settings layouts.
+
+## [0.5.0] - 2026-11-06
+
+- Rebuilt settings with grouped sections, selectable color chips, live appearance previews, consistent switches/sliders, a scrollable body, and a fixed Save/Cancel footer.
+- Added a shared editable vector app mark and dedicated multi-resolution notification-area icons, plus a styled tray menu with note counts, action icons, and direct per-note visibility toggles.
+- Reduced note-title-bar clutter with a More menu for rename/minimize/delete, kept formatting tools on one row at the default width, and refined the bottom-right resize grip.
+- Fixed overlapping notes flickering on the desktop: one application-level coordinator restores notes in activation order, coalesces shell notifications, and bounds retries instead of repeatedly raising every note.
+- Desktop recovery preserves normal/topmost bands and keyboard focus, and excludes intentionally hidden or taskbar-minimized notes.
+- Collapsing to a floating icon no longer permanently enables the note's saved always-on-top preference.
+- Refined paper colors, grouped formatting tools, vector action icons, pin feedback, keyboard focus, and accessible control names. Added current-format indicators, an empty-note hint, and a visible scrollbar for long notes.
+- Clicking the title bar keeps the note open; drag to move, double-click or press F2 to rename, and use the dedicated collapse button to fold the note.
+- Added desktop-recovery policy and native-window regression coverage, plus reproducible WPF preview rendering with sample content.
+
 ## [0.4.0] - 2026-10-05
 
 - Fixed note resizing with drag handles on all four edges and corners, including transparent borderless windows.

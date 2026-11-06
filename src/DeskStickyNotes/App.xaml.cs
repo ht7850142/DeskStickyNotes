@@ -10,7 +10,7 @@ namespace DeskStickyNotes;
 
 public partial class App : System.Windows.Application
 {
-    private readonly NoteStorageService _storageService = new();
+    private readonly NoteStorageService _storageService;
     private readonly StartupService _startupService = new();
     private readonly ObservableCollection<NoteViewModel> _notes = new();
     private readonly Dictionary<Guid, NoteWindow> _noteWindows = new();
@@ -21,12 +21,20 @@ public partial class App : System.Windows.Application
     private SettingsWindow? _settingsWindow;
     private DispatcherTimer? _autoSaveTimer;
     private AppSettings _settings = new();
+    private GlobalHotkeyService? _hotkeys;
+    private Guid? _lastActivatedNoteId;
+    private readonly DesktopNoteRecoveryService _desktopRecovery = new(NoteWindow.IsShellDesktopForeground);
+
+    public App() : this(new NoteStorageService()) { }
+    internal App(NoteStorageService storageService) => _storageService = storageService;
 
     internal static new App Current => (App)System.Windows.Application.Current;
 
     internal bool IsExitRequested { get; private set; }
 
     internal bool KeepNotesVisibleAfterShowDesktop => _settings.KeepNotesVisibleAfterShowDesktop;
+
+    internal void RequestDesktopRecovery() => _desktopRecovery.RequestRecovery();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -55,6 +63,10 @@ public partial class App : System.Windows.Application
             (id, visible) => Dispatcher.Invoke(() => SetNoteVisibility(id, visible)));
         _trayService.Show();
 
+        _hotkeys = new GlobalHotkeyService(CreateNoteFromHotkey, CycleNotes);
+        if (!_hotkeys.TryInitialize(_settings.NewNoteHotkey, _settings.NextNoteHotkey, out var failure))
+            _trayService.ShowHotkeyWarning(failure!.ToUserMessage());
+
         StartAutoSaveTimer();
 
         foreach (var note in _notes.Where(note => note.Visible).ToList())
@@ -73,6 +85,8 @@ public partial class App : System.Windows.Application
         }
 
         IsExitRequested = true;
+        _desktopRecovery.Dispose();
+        _hotkeys?.Dispose();
         SaveAll();
         _trayService?.Dispose();
         if (_ownsSingleInstanceMutex)
@@ -98,6 +112,8 @@ public partial class App : System.Windows.Application
         _settings.DefaultColor = NotePalette.Normalize(_settings.DefaultColor);
         _settings.DefaultFontSize = Math.Clamp(_settings.DefaultFontSize, 10, 28);
         _settings.AutoSaveIntervalSeconds = Math.Clamp(_settings.AutoSaveIntervalSeconds, 1, 60);
+        _settings.NewNoteHotkey ??= HotkeyGesture.DefaultNewNote;
+        _settings.NextNoteHotkey ??= HotkeyGesture.DefaultNextNote;
 
         foreach (var noteModel in _storageService.LoadNotes())
         {
@@ -144,6 +160,28 @@ public partial class App : System.Windows.Application
         var viewModel = CreateViewModel(CreateDefaultNote());
         _notes.Add(viewModel);
         ShowNoteWindow(viewModel, activate: true);
+        SaveAll();
+    }
+
+    private bool CanUseGlobalHotkey() => !IsExitRequested && _noteWindows.Values.All(window => window.IsEnabled);
+
+    private void CreateNoteFromHotkey()
+    {
+        if (!CanUseGlobalHotkey()) return;
+        CreateNote();
+        if (_notes.LastOrDefault() is { } created && _noteWindows.TryGetValue(created.Id, out var window))
+            window.RevealForShortcut(_noteWindows.Values.Any(other => other != window && other.IsVisible && other.Topmost));
+    }
+
+    private void CycleNotes()
+    {
+        if (!CanUseGlobalHotkey()) return;
+        if (_notes.Count == 0) { CreateNoteFromHotkey(); return; }
+        var current = _notes.ToList().FindIndex(note => note.Id == _lastActivatedNoteId);
+        var next = _notes[(current + 1) % _notes.Count];
+        ShowNoteWindow(next, activate: true);
+        var window = _noteWindows[next.Id];
+        window.RevealForShortcut(_noteWindows.Values.Any(other => other != window && other.IsVisible && other.Topmost));
         SaveAll();
     }
 
@@ -200,7 +238,18 @@ public partial class App : System.Windows.Application
         if (!_noteWindows.TryGetValue(note.Id, out var window))
         {
             window = new NoteWindow(note);
-            window.Closed += (_, _) => _noteWindows.Remove(note.Id);
+            var registeredWindow = window;
+            window.SourceInitialized += (_, _) => _desktopRecovery.Register(registeredWindow);
+            window.Activated += (_, _) =>
+            {
+                _lastActivatedNoteId = note.Id;
+                _desktopRecovery.NoteActivated(registeredWindow);
+            };
+            window.Closed += (_, _) =>
+            {
+                _desktopRecovery.Unregister(registeredWindow);
+                _noteWindows.Remove(note.Id);
+            };
             _noteWindows[note.Id] = window;
         }
 
@@ -218,7 +267,9 @@ public partial class App : System.Windows.Application
 
         if (activate)
         {
+            _lastActivatedNoteId = note.Id;
             window.Activate();
+            window.FocusNoteContent();
         }
     }
 
@@ -279,11 +330,20 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        var viewModel = new SettingsViewModel(_settings.Clone(), ApplySettings);
-        _settingsWindow = new SettingsWindow(viewModel);
+        var viewModel = new SettingsViewModel(_settings.Clone(), ApplySettings, settings =>
+            _hotkeys is null || _hotkeys.TryApply(settings.NewNoteHotkey, settings.NextNoteHotkey, out var failure)
+                ? null : failure!.ToUserMessage());
+        _settingsWindow = new SettingsWindow(viewModel, SetHotkeyCapture);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private void SetHotkeyCapture(bool capturing)
+    {
+        if (IsExitRequested || _hotkeys is null) return;
+        if (capturing) _hotkeys.Suspend();
+        else if (!_hotkeys.Resume(out var failure)) _trayService?.ShowHotkeyWarning(failure!.ToUserMessage());
     }
 
     private void ApplySettings(AppSettings settings)

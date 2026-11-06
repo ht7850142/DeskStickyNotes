@@ -197,7 +197,7 @@ function Invoke-Inno(
 function New-SelfContainedPortableZip(
     [string]$Name
 ) {
-    $portableRuntimePublishDir = Join-Path $root "artifacts\publish\$Runtime-portable-runtime"
+    $portableRuntimePublishDir = Join-Path $publishRoot "$appVersion\$Runtime-portable-runtime"
     Publish-App -PublishDir $portableRuntimePublishDir -PublishSelfContained $true
     New-PortableZip -PublishDir $portableRuntimePublishDir -Name $Name
 }
@@ -209,7 +209,7 @@ if (-not $SkipInstaller -and -not (Resolve-InnoSetup)) {
 if ($AllInstallers) {
     $runtimeInstallerPath = Resolve-RuntimeInstaller $RuntimeInstaller
 
-    $smallPublishDir = Join-Path $root "artifacts\publish\$Runtime-fd"
+    $smallPublishDir = Join-Path $publishRoot "$appVersion\$Runtime-fd"
     Publish-App -PublishDir $smallPublishDir -PublishSelfContained $false
     New-PortableZip -PublishDir $smallPublishDir -Name "DeskStickyNotes-portable-$appVersion-$Runtime-fd.zip"
     Invoke-Inno -PublishDir $smallPublishDir -PackageSuffix "-fd" -BundleRuntime $false -RuntimeInstallerPath ""
@@ -236,7 +236,7 @@ if ($AllInstallers) {
 else {
     $bundleRuntime = [bool]$IncludeRuntime
     $runtimeInstallerPath = if ($bundleRuntime) { Resolve-RuntimeInstaller $RuntimeInstaller } else { "" }
-    $publishDir = Join-Path $root "artifacts\publish\$Runtime"
+    $publishDir = Join-Path $publishRoot "$appVersion\$Runtime"
 
     if ($bundleRuntime) {
         $SelfContained = $false

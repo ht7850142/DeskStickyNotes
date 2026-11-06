@@ -9,10 +9,10 @@
     <RootNamespace>DeskStickyNotes</RootNamespace>
     <AssemblyName>DeskStickyNotes</AssemblyName>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>0.4.0</Version>
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.0</FileVersion>
-    <InformationalVersion>0.4.0</InformationalVersion>
+    <Version>0.6.0</Version>
+    <AssemblyVersion>0.6.0.0</AssemblyVersion>
+    <FileVersion>0.6.0.0</FileVersion>
+    <InformationalVersion>0.6.0</InformationalVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
@@ -24,5 +24,7 @@
     <None Remove="Assets\AppIcon.png" />
     <Resource Include="Assets\AppIcon.ico" />
     <Resource Include="Assets\AppIcon.png" />
+    <None Remove="Assets\TrayIcon.ico" />
+    <Resource Include="Assets\TrayIcon.ico" />
   </ItemGroup>
 </Project>

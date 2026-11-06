@@ -41,6 +41,20 @@ Please check:
 - Note content and settings remain local.
 - Large binaries are not committed. Build outputs belong in `bin/`, `obj/`, or `artifacts/`.
 
+The regression executable briefly opens overlapping sample windows for native stacking, focus, and minimize/restore checks. Its WPF host skips application startup and user storage. To render reproducible interface previews with sample content:
+
+```powershell
+dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release -- --render-preview artifacts/qa
+```
+
+This also renders settings, the tray menu, and an overview with light/dark tray-icon checks. After editing the native vector icon master, regenerate the shipped icon assets:
+
+```powershell
+./scripts/build-icons.ps1
+```
+
+Before releasing shell-behavior changes, manually check two overlapping pinned notes and a mixed pinned/unpinned pair with Win+D, clicking the desktop, switching between notes, intentional taskbar minimization, and the keep-after-Win+D setting disabled. Native regression checks do not reproduce Explorer's complete Show Desktop behavior.
+
 ## Code Style
 
 - Prefer existing MVVM patterns already used in the repository.

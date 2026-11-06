@@ -1,183 +1,257 @@
 <Window x:Class="DeskStickyNotes.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{DynamicResource SettingsTitle}"
-        Icon="/Assets/AppIcon.ico"
-        Width="460"
-        SizeToContent="Height"
-        ResizeMode="NoResize"
-        WindowStartupLocation="CenterScreen"
-        ShowInTaskbar="False"
-        Background="#EEF2F7">
-    <Border Margin="14"
-            Padding="22"
-            Background="White"
-            BorderBrush="{StaticResource PanelBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="8">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="24"
-                              ShadowDepth="2"
-                              Direction="270"
-                              Opacity="0.16"
-                              Color="#111827" />
-        </Border.Effect>
-
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="18" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="18" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-
-            <DockPanel Grid.Row="0" LastChildFill="True">
-                <Image DockPanel.Dock="Left"
-                       Width="42"
-                       Height="42"
-                       Margin="0,0,12,0"
-                       Source="pack://application:,,,/Assets/AppIcon.png" />
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource SettingsTitle}"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="{DynamicResource SettingsSubtitle}"
-                               Margin="0,3,0,0"
-                               Foreground="{StaticResource TextSecondaryBrush}" />
-                </StackPanel>
-            </DockPanel>
-
-            <Grid Grid.Row="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="155" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="42" />
-                    <RowDefinition Height="42" />
-                    <RowDefinition Height="52" />
-                    <RowDefinition Height="36" />
-                    <RowDefinition Height="36" />
-                    <RowDefinition Height="36" />
-                    <RowDefinition Height="52" />
-                </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingLanguage}" />
-                <ComboBox Grid.Row="0"
-                          Grid.Column="1"
-                          ItemsSource="{Binding AvailableLanguages}"
-                          DisplayMemberPath="DisplayName"
-                          SelectedValuePath="Code"
-                          SelectedValue="{Binding Language}" />
-
-                <TextBlock Grid.Row="1"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingDefaultColor}" />
-                <ComboBox Grid.Row="1"
-                          Grid.Column="1"
-                          ItemsSource="{Binding AvailableColors}"
-                          SelectedValuePath="Code"
-                          SelectedValue="{Binding DefaultColor}">
-                    <ComboBox.ItemTemplate>
+        Title="{DynamicResource SettingsTitle}" Icon="/Assets/AppIcon.ico"
+        Width="600" Height="790" MinWidth="500" MinHeight="420"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="False"
+        ResizeMode="CanResize" UseLayoutRounding="True"
+        Background="{StaticResource SettingsSurfaceBrush}">
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </Window.InputBindings>
+    <Window.Resources>
+        <Style x:Key="SettingsSectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+        <Style x:Key="SettingsLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="SettingsHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="LineHeight" Value="18" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{StaticResource SettingsMutedBrush}" />
+        </Style>
+        <Style x:Key="HotkeyEntryStyle" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="ToolTip" Value="{DynamicResource HotkeyCaptureHint}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Field" Background="White" BorderBrush="{StaticResource SettingsDividerBrush}"
+                                BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <ScrollViewer x:Name="PART_ContentHost" />
+                                <TextBlock x:Name="Hint" Visibility="Collapsed" IsHitTestVisible="False" FontSize="12"
+                                           Text="{DynamicResource HotkeyNotSet}" Foreground="{StaticResource SettingsMutedBrush}" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value=""><Setter TargetName="Hint" Property="Visibility" Value="Visible" /></Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Field" Property="BorderBrush" Value="{StaticResource NoteFocusBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <EventSetter Event="PreviewKeyDown" Handler="Hotkey_PreviewKeyDown" />
+            <EventSetter Event="GotKeyboardFocus" Handler="Hotkey_GotKeyboardFocus" />
+            <EventSetter Event="LostKeyboardFocus" Handler="Hotkey_LostKeyboardFocus" />
+        </Style>
+    </Window.Resources>
+    <Grid Background="{StaticResource SettingsSurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <DockPanel Margin="28,24,28,20">
+            <Image Source="{StaticResource AppMark}" Width="44" Height="44"
+                   Margin="0,0,14,0" VerticalAlignment="Center" />
+            <StackPanel>
+                <TextBlock Text="{DynamicResource SettingsTitle}" FontSize="24" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Text="{DynamicResource SettingsSubtitle}" Margin="0,4,0,0"
+                           Style="{StaticResource SettingsHint}" />
+            </StackPanel>
+        </DockPanel>
+        <ScrollViewer x:Name="SettingsScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled" Padding="28,0,28,20"
+                      CanContentScroll="False" Focusable="False">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource SettingsAppearanceTitle}" Style="{StaticResource SettingsSectionTitle}" />
+                <TextBlock Text="{DynamicResource SettingsDefaultsHint}" Style="{StaticResource SettingsHint}" Margin="0,-6,0,16" />
+                <TextBlock Text="{DynamicResource SettingDefaultColor}" Style="{StaticResource SettingsLabel}" Margin="0,0,0,8" />
+                <ListBox x:Name="ColorPicker" ItemsSource="{Binding AvailableColors}" SelectedValuePath="Code"
+                         SelectedValue="{Binding DefaultColor}" BorderThickness="0" Background="Transparent"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="0"
+                         AutomationProperties.Name="{DynamicResource SettingDefaultColor}">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Margin" Value="0,0,8,8" />
+                            <Setter Property="Padding" Value="10,7" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Setter Property="AutomationProperties.Name" Value="{Binding DisplayName}" />
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Chip" Background="{StaticResource SettingsSurfaceBrush}"
+                                                BorderBrush="{StaticResource SettingsDividerBrush}" BorderThickness="1"
+                                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chip" Property="Background" Value="#EEF2EC" /></Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Chip" Property="Background" Value="#E7EEE7" />
+                                                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource NotePinnedBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource NoteFocusBrush}" />
+                                                <Setter TargetName="Chip" Property="BorderThickness" Value="2" />
+                                                <Setter TargetName="Chip" Property="Padding" Value="9,6" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <Border Width="13"
-                                        Height="13"
-                                        Margin="0,0,8,0"
-                                        CornerRadius="7"
-                                        Background="{Binding SwatchHex}"
-                                        BorderBrush="#55000000"
-                                        BorderThickness="1" />
-                                <TextBlock Text="{Binding DisplayName}" />
+                                <Ellipse Width="16" Height="16" Fill="{Binding SwatchHex}" Stroke="#30000000" StrokeThickness="1" Margin="0,0,7,0" />
+                                <TextBlock Text="{Binding DisplayName}" FontSize="12" VerticalAlignment="Center" />
                             </StackPanel>
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-
-                <TextBlock Grid.Row="2"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingFontSize}" />
-                <StackPanel Grid.Row="2" Grid.Column="1">
-                    <TextBlock Text="{Binding DefaultFontSize, StringFormat={}{0:0} pt}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               HorizontalAlignment="Right" />
-                    <Slider Minimum="10"
-                            Maximum="28"
-                            TickFrequency="1"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding DefaultFontSize}" />
-                </StackPanel>
-
-                <TextBlock Grid.Row="3"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingStartWithWindows}" />
-                <CheckBox Grid.Row="3"
-                          Grid.Column="1"
-                          IsChecked="{Binding StartWithWindows}" />
-
-                <TextBlock Grid.Row="4"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingDefaultTopmost}" />
-                <CheckBox Grid.Row="4"
-                          Grid.Column="1"
-                          IsChecked="{Binding DefaultTopmost}" />
-
-                <TextBlock Grid.Row="5"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingKeepAfterWinD}" />
-                <CheckBox Grid.Row="5"
-                          Grid.Column="1"
-                          IsChecked="{Binding KeepNotesVisibleAfterShowDesktop}" />
-
-                <TextBlock Grid.Row="6"
-                           Grid.Column="0"
-                           Style="{StaticResource FieldLabelStyle}"
-                           Text="{DynamicResource SettingAutoSave}" />
-                <StackPanel Grid.Row="6" Grid.Column="1">
-                    <TextBlock Text="{Binding AutoSaveIntervalSeconds, StringFormat={}{0:0} seconds}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               HorizontalAlignment="Right" />
-                    <Slider Minimum="1"
-                            Maximum="60"
-                            TickFrequency="1"
-                            IsSnapToTickEnabled="True"
-                            Value="{Binding AutoSaveIntervalSeconds}" />
-                </StackPanel>
-            </Grid>
-
-            <DockPanel Grid.Row="4"
-                       LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="{DynamicResource SettingVersion}"
-                               Foreground="{StaticResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding AppVersion, StringFormat={} {0}}"
-                               Foreground="{StaticResource TextSecondaryBrush}" />
-                </StackPanel>
-
-                <StackPanel DockPanel.Dock="Right"
-                            Orientation="Horizontal">
-                    <Button Content="{DynamicResource ButtonCancel}"
-                            Margin="0,0,10,0"
-                            Style="{StaticResource SecondaryButtonStyle}"
-                            Command="{Binding CancelCommand}" />
-                    <Button Content="{DynamicResource ButtonSave}"
-                            IsDefault="True"
-                            Style="{StaticResource PrimaryButtonStyle}"
-                            Command="{Binding SaveCommand}" />
-                </StackPanel>
-            </DockPanel>
-        </Grid>
-    </Border>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <DockPanel Margin="0,8,0,0">
+                    <TextBlock Text="{DynamicResource SettingFontSize}" Style="{StaticResource SettingsLabel}" />
+                    <TextBlock Text="{Binding DefaultFontSize, StringFormat={}{0:0}}" HorizontalAlignment="Right"
+                               FontWeight="SemiBold" Foreground="{StaticResource NotePinnedBrush}" />
+                </DockPanel>
+                <Slider x:Name="FontSizeSlider" Minimum="10" Maximum="28" TickFrequency="1" IsSnapToTickEnabled="True"
+                        IsMoveToPointEnabled="True" Value="{Binding DefaultFontSize}"
+                        Style="{StaticResource SettingsSliderStyle}" Margin="0,3,0,10"
+                        AutomationProperties.Name="{DynamicResource SettingFontSize}" />
+                <Border Background="{Binding PreviewBackground}" CornerRadius="8" Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="26" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <Border Background="{Binding PreviewHeader}" CornerRadius="8,8,0,0" Padding="14,0">
+                            <TextBlock Text="{DynamicResource SettingsPreviewTitle}" Foreground="#526052" FontSize="11" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Grid.Row="1" Text="{DynamicResource SettingsPreviewText}" FontSize="{Binding DefaultFontSize}"
+                                   Foreground="#303B35" Margin="14,12" TextWrapping="Wrap" />
+                    </Grid>
+                </Border>
+                <DockPanel Margin="0,2,0,0" LastChildFill="True">
+                    <CheckBox x:Name="DefaultTopmostToggle" DockPanel.Dock="Right" Style="{StaticResource SettingsSwitchStyle}"
+                              IsChecked="{Binding DefaultTopmost}" Margin="16,0,0,0"
+                              AutomationProperties.Name="{DynamicResource SettingDefaultTopmost}" />
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource SettingDefaultTopmost}" Style="{StaticResource SettingsLabel}" />
+                        <TextBlock Text="{DynamicResource SettingsTopmostHint}" Style="{StaticResource SettingsHint}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </DockPanel>
+                <Border Height="1" Background="{StaticResource SettingsDividerBrush}" Margin="0,22,0,20" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="{DynamicResource HotkeyReset}"
+                            Style="{StaticResource SecondaryButtonStyle}" MinWidth="64" Height="30" Padding="10,0" FontSize="12"
+                            Command="{Binding ResetHotkeysCommand}" />
+                    <TextBlock Text="{DynamicResource SettingsHotkeysTitle}" Style="{StaticResource SettingsSectionTitle}" />
+                </DockPanel>
+                <TextBlock Text="{DynamicResource HotkeyCaptureHint}" Style="{StaticResource SettingsHint}" Margin="0,0,0,12" />
+                <TextBlock Text="{DynamicResource SettingNewNoteHotkey}" Style="{StaticResource SettingsLabel}" Margin="0,0,0,6" />
+                <DockPanel Margin="0,0,0,12">
+                    <Button DockPanel.Dock="Right" Content="{DynamicResource HotkeyClear}" Margin="8,0,0,0"
+                            Style="{StaticResource SecondaryButtonStyle}" MinWidth="64" Height="36" Padding="10,0" FontSize="12"
+                            Command="{Binding ClearNewNoteHotkeyCommand}" />
+                    <TextBox x:Name="NewNoteHotkeyBox" Style="{StaticResource HotkeyEntryStyle}"
+                             Text="{Binding NewNoteHotkey, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{DynamicResource SettingNewNoteHotkey}" />
+                </DockPanel>
+                <TextBlock Text="{DynamicResource SettingNextNoteHotkey}" Style="{StaticResource SettingsLabel}" Margin="0,0,0,6" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="{DynamicResource HotkeyClear}" Margin="8,0,0,0"
+                            Style="{StaticResource SecondaryButtonStyle}" MinWidth="64" Height="36" Padding="10,0" FontSize="12"
+                            Command="{Binding ClearNextNoteHotkeyCommand}" />
+                    <TextBox x:Name="NextNoteHotkeyBox" Style="{StaticResource HotkeyEntryStyle}"
+                             Text="{Binding NextNoteHotkey, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{DynamicResource SettingNextNoteHotkey}" />
+                </DockPanel>
+                <TextBlock Text="{DynamicResource HotkeyCycleHint}" Style="{StaticResource SettingsHint}" Margin="0,8,0,0" />
+                <Border Height="1" Background="{StaticResource SettingsDividerBrush}" Margin="0,22,0,20" />
+                <TextBlock Text="{DynamicResource SettingsDesktopTitle}" Style="{StaticResource SettingsSectionTitle}" />
+                <DockPanel Margin="0,0,0,18" LastChildFill="True">
+                    <ComboBox x:Name="LanguagePicker" DockPanel.Dock="Right" Width="164"
+                              Style="{StaticResource SettingsComboBoxStyle}"
+                              ItemsSource="{Binding AvailableLanguages}" DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Code" SelectedValue="{Binding Language}"
+                              AutomationProperties.Name="{DynamicResource SettingLanguage}" />
+                    <TextBlock Text="{DynamicResource SettingLanguage}" Style="{StaticResource SettingsLabel}" />
+                </DockPanel>
+                <DockPanel Margin="0,0,0,18" LastChildFill="True">
+                    <CheckBox x:Name="StartupToggle" DockPanel.Dock="Right" Style="{StaticResource SettingsSwitchStyle}"
+                              IsChecked="{Binding StartWithWindows}" Margin="16,0,0,0"
+                              AutomationProperties.Name="{DynamicResource SettingStartWithWindows}" />
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource SettingStartWithWindows}" Style="{StaticResource SettingsLabel}" />
+                        <TextBlock Text="{DynamicResource SettingsStartupHint}" Style="{StaticResource SettingsHint}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </DockPanel>
+                <DockPanel LastChildFill="True">
+                    <CheckBox x:Name="DesktopToggle" DockPanel.Dock="Right" Style="{StaticResource SettingsSwitchStyle}"
+                              IsChecked="{Binding KeepNotesVisibleAfterShowDesktop}" Margin="16,0,0,0"
+                              AutomationProperties.Name="{DynamicResource SettingKeepAfterWinD}" />
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource SettingKeepAfterWinD}" Style="{StaticResource SettingsLabel}" />
+                        <TextBlock Text="{DynamicResource SettingsDesktopHint}" Style="{StaticResource SettingsHint}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </DockPanel>
+                <Border Height="1" Background="{StaticResource SettingsDividerBrush}" Margin="0,22,0,20" />
+                <TextBlock Text="{DynamicResource SettingsSaveTitle}" Style="{StaticResource SettingsSectionTitle}" />
+                <DockPanel>
+                    <TextBlock Text="{DynamicResource SettingAutoSave}" Style="{StaticResource SettingsLabel}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding AutoSaveIntervalSeconds, StringFormat={}{0:0}}" Foreground="{StaticResource NotePinnedBrush}" FontWeight="SemiBold" />
+                        <TextBlock Text="{DynamicResource SettingsSecondsUnit}" Foreground="{StaticResource SettingsMutedBrush}" Margin="4,0,0,0" />
+                    </StackPanel>
+                </DockPanel>
+                <Slider x:Name="AutoSaveSlider" Minimum="1" Maximum="60" TickFrequency="1" IsSnapToTickEnabled="True"
+                        IsMoveToPointEnabled="True" Value="{Binding AutoSaveIntervalSeconds}"
+                        Style="{StaticResource SettingsSliderStyle}" Margin="0,3,0,4"
+                        AutomationProperties.Name="{DynamicResource SettingAutoSave}" />
+                <TextBlock Text="{DynamicResource SettingsStorageHint}" Style="{StaticResource SettingsHint}" />
+            </StackPanel>
+        </ScrollViewer>
+        <Border Grid.Row="2" BorderBrush="{StaticResource SettingsDividerBrush}" BorderThickness="0,1,0,0"
+                Background="{StaticResource SettingsSurfaceBrush}" Padding="28,16">
+            <StackPanel>
+                <TextBlock Text="{Binding ValidationError}" Foreground="#963A36" TextWrapping="Wrap" Margin="0,0,0,10"
+                           AutomationProperties.LiveSetting="Assertive">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers><DataTrigger Binding="{Binding HasValidationError}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Content="{DynamicResource ButtonCancel}" Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding CancelCommand}" Margin="0,0,10,0" />
+                        <Button Content="{DynamicResource SettingsSaveButton}" Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding SaveCommand}" IsDefault="True" />
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource SettingsLocalLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SettingsMutedBrush}" />
+                        <TextBlock Text="{Binding AppVersion, StringFormat={}v{0}}" FontSize="11" Foreground="{StaticResource SettingsMutedBrush}" Margin="0,2,0,0" />
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Window>
