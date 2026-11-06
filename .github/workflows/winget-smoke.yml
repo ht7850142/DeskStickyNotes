@@ -45,7 +45,6 @@ jobs:
           $manifestPath = Join-Path $env:GITHUB_WORKSPACE 'winget-validation'
           $packageRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
           $linksRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'
-          $packageId = 'DeskStickyNotes.DeskStickyNotes'
           & $wingetPath settings --enable LocalManifestFiles
           if ($LASTEXITCODE -ne 0) { throw 'Local manifests could not be enabled in the test VM.' }
           try {
@@ -61,10 +60,14 @@ jobs:
             }
             Write-Host "Verified executable version $($installed[0].VersionInfo.ProductVersion)."
 
-            & $wingetPath uninstall --id $packageId --exact --silent --disable-interactivity --accept-source-agreements
+            $testEntries = @(Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+              Where-Object { $_.DisplayName -eq 'DeskStickyNotes' -and $_.DisplayVersion -eq '0.6.0' })
+            if ($testEntries.Count -ne 1) { throw 'Could not identify the installed portable package in the test user registry.' }
+            $testEntry = $testEntries[0]
+            & $wingetPath uninstall --product-code $testEntry.PSChildName --scope user --source winget --silent --disable-interactivity --accept-source-agreements
             if ($LASTEXITCODE -ne 0) { throw 'Silent portable uninstallation failed.' }
-            if ((Test-Path -LiteralPath $installed[0].FullName) -or (Test-Path -LiteralPath $aliases[0].FullName)) {
-              throw 'The portable executable or command alias remained after uninstallation.'
+            if ((Test-Path -LiteralPath $installed[0].FullName) -or (Test-Path -LiteralPath $aliases[0].FullName) -or (Test-Path -LiteralPath $testEntry.PSPath)) {
+              throw 'The portable executable, command alias, or registration remained after uninstallation.'
             }
             Write-Host 'DeskStickyNotes 0.6.0 manifest install and uninstall verified.'
           } finally {
