@@ -29,18 +29,18 @@ jobs:
           if ($version -notmatch '^v?(\d+\.\d+\.\d+)' -or [version]$Matches[1] -lt [version]'1.28.0') {
             Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope CurrentUser -Force
             Import-Module Microsoft.WinGet.Client
-            Repair-WinGetPackageManager -AllUsers
-            $command = Get-Command winget.exe -ErrorAction SilentlyContinue
-          }
-          if ($command) {
-            $wingetPath = $command.Source
-          } else {
+            Repair-WinGetPackageManager -Version '1.29.380' -Force
             $appInstaller = Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Sort-Object Version -Descending | Select-Object -First 1
             if (!$appInstaller) { throw 'App Installer is unavailable on the disposable runner.' }
             $wingetPath = Join-Path $appInstaller.InstallLocation 'winget.exe'
+          } else {
+            $wingetPath = $command.Source
           }
-          & $wingetPath --version
-          if ($LASTEXITCODE -ne 0) { throw 'WinGet is not usable on the disposable runner.' }
+          $version = & $wingetPath --version
+          if ($LASTEXITCODE -ne 0 -or $version -notmatch '^v?(\d+\.\d+\.\d+)' -or [version]$Matches[1] -lt [version]'1.28.0') {
+            throw "The disposable runner did not load WinGet 1.28 or newer. Actual version: $version"
+          }
+          Write-Host "Testing with WinGet $version."
 
           $manifestPath = Join-Path $env:GITHUB_WORKSPACE 'winget-validation'
           $packageRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
