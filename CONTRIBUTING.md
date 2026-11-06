@@ -49,7 +49,9 @@ The regression executable briefly opens overlapping sample windows for native st
 dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release -- --render-preview artifacts/qa
 ```
 
-This also renders settings, the tray menu, and an overview with light/dark tray-icon checks. After editing the native vector icon master, regenerate the shipped icon assets:
+This also renders settings, the tray menu, and an overview with light/dark tray-icon checks. For high-resolution publication assets, use `--render-press-assets assets/banners/desksticky-0.6.0/raw` instead of `--render-preview`. This renders sample-only note, collapsed-icon, tray, and localized settings views; WPF controls are captured at 2×. The [press-kit instructions](assets/banners/desksticky-0.6.0/README.md) explain composition and ego-browser export. Do not use personal notes in release images.
+
+After editing the native vector icon master, regenerate the shipped icon assets:
 
 ```powershell
 ./scripts/build-icons.ps1

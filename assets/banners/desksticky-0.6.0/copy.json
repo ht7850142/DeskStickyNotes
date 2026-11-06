@@ -1,0 +1,40 @@
+{
+  "product": "DeskStickyNotes",
+  "version": "0.6.0",
+  "platform": "Windows 10/11 x64",
+  "license": "MIT",
+  "price": "Free",
+  "homepage": "https://github.com/ht7850142/DeskStickyNotes",
+  "download": "https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0",
+  "recommended_installer": "https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotesSetup-0.6.0-runtime.exe",
+  "tagline_en": "Quiet desktop sticky notes for Windows",
+  "description_en": "Free, open-source sticky notes for Windows 10/11. Keep reminders visible with per-note pinning and compact icons, capture rich text and text snippets, and create or cycle notes with customizable global shortcuts. Seven UI languages. Local storage, no account, and no cloud sync. Installer and portable builds.",
+  "tagline_zh": "把灵感留在手边：支持置顶、折叠和全局快捷键的开源 Windows 便签。",
+  "short_description_zh": "DeskStickyNotes 是免费开源的 Windows 10/11 桌面便签。支持富文本与待办、单便签置顶、折叠小图标、托盘管理、自定义全局快捷键和七种语言。无需账号，便签保存在本机，提供安装包和绿色版。",
+  "default_new_note": "Ctrl+Alt+N",
+  "default_next_note": "Ctrl+Alt+PageDown",
+  "languages": [
+    "简体中文",
+    "繁體中文",
+    "English",
+    "Français",
+    "Español",
+    "Português",
+    "日本語"
+  ],
+  "producthunt_candidate_tags": [
+    "Productivity",
+    "Open Source",
+    "Note-taking"
+  ],
+  "technical_notes": [
+    "Windows x64 only; not a web, macOS, Linux, or mobile app.",
+    "The app stores data in %AppData%/DeskStickyNotes for both installed and portable builds.",
+    "Show Desktop / Win+D recovery is best effort.",
+    "Current GitHub release packages are unsigned.",
+    "Images are compiled app-control renders using sample content; no private notes were used.",
+    "No cloud sync or in-app automatic update service is provided."
+  ],
+  "submission_status": "Prepared only. Not submitted to third-party communities, directories, or stores.",
+  "prepared_on": "2026-11-06"
+}

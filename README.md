@@ -125,6 +125,8 @@ Exit the previous version from the tray before upgrading, then install over it. 
 
 These images render the compiled 0.6.0 controls with sample notes. They contain no personal note data.
 
+For reusable launch images, raw UI captures, and editable sources, see the [0.6.0 press kit](assets/banners/desksticky-0.6.0/README.md). The [publishing guide](docs/PUBLISHING.md) includes a researched channel shortlist and Chinese/English submission drafts.
+
 ### Notes, Settings, And Tray
 
 ![DeskStickyNotes 0.6.0 overview showing a paper-style note, grouped settings, global shortcuts, and tray menu](docs/images/interface-overview.png)

@@ -32,6 +32,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         if (args.Length == 2 && args[0] == "--render-preview") return RenderPreview(args[1]);
+        if (args.Length == 2 && args[0] == "--render-press-assets") return RenderPressAssets(args[1]);
         var tests = new (string Name, Action Run)[]
         {
             ("All eight resize handles move the requested edges", ResizeEveryEdge),
@@ -846,6 +847,73 @@ internal static class Program
         timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
         timer.Start();
         Dispatcher.PushFrame(frame);
+    }
+
+    private static int RenderPressAssets(string outputDirectory)
+    {
+        // Sample-only compiled controls, rendered at 2x for publication assets.
+        // This host skips startup, tray registration, and real user storage.
+        var app = new RegressionApp();
+        Directory.CreateDirectory(outputDirectory);
+        void Capture(Window window, string filename, int width, int height)
+        {
+            var root = (FrameworkElement)window.Content;
+            root.Measure(new Size(width, height));
+            root.Arrange(new Rect(0, 0, width, height));
+            root.UpdateLayout();
+            var bitmap = new RenderTargetBitmap(width * 2, height * 2, 192, 192, PixelFormats.Pbgra32);
+            bitmap.Render(root);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = File.Create(Path.Combine(outputDirectory, filename));
+            encoder.Save(stream);
+        }
+        foreach (var language in new[] { "zh-Hans", "en-US" })
+        {
+            LocalizationService.ApplyLanguage(language);
+            var chinese = language == "zh-Hans";
+            foreach (var (width, color, name, text) in new[]
+            {
+                (540, NotePalette.Yellow, chinese ? "今天，慢慢完成" : "A little focus for today",
+                    chinese ? "本周的三件小事\n\n☑ 整理脑海里的想法\n☐ 完成手头的工作\n☐ 留一点时间给自己\n\n把灵感留在手边。\n一次，只专注一件事。" : "Three small things this week\n\n☑ Make space for an idea\n☐ Finish the work at hand\n☐ Leave a little time for yourself\n\nKeep a thought within reach.\nOne thing at a time."),
+                (300, NotePalette.Green, chinese ? "一闪而过的灵感" : "A passing thought",
+                    chinese ? "记下，然后继续。\n\nCtrl+Alt+N 新建便签\nCtrl+Alt+PageDown 切换" : "Write it down. Keep going.\n\nCtrl+Alt+N to create\nCtrl+Alt+PageDown to switch"),
+                (420, NotePalette.Blue, chinese ? "随手记" : "A clean page", "")
+            })
+            {
+                var model = new NoteModel { Title = name, Width = width, Height = 400, Color = color, TextContent = text, Topmost = color == NotePalette.Yellow };
+                var window = new NoteWindow(new NoteViewModel(model, 15));
+                Capture(window, $"note-{width}-{language}.png", width, 400);
+                if (width == 540)
+                {
+                    Invoke(window, "CollapseToIcon");
+                    Capture(window, $"collapsed-{language}.png", 64, 64);
+                }
+                window.CloseForApplication();
+            }
+            var notes = new[] { new TrayNote(Guid.NewGuid(), chinese ? "今天，慢慢完成" : "A little focus for today", true), new TrayNote(Guid.NewGuid(), chinese ? "一闪而过的灵感" : "A passing thought", false) };
+            using var tray = new TrayService(() => { }, () => { }, () => { }, () => { }, () => { }, () => notes, (_, _) => { });
+            using var menu = tray.CreateContextMenu();
+            menu.CreateControl();
+            menu.PerformLayout();
+            menu.Size = menu.GetPreferredSize(System.Drawing.Size.Empty);
+            using var bitmap = new System.Drawing.Bitmap(menu.Width, menu.Height);
+            menu.DrawToBitmap(bitmap, new System.Drawing.Rectangle(System.Drawing.Point.Empty, menu.Size));
+            bitmap.Save(Path.Combine(outputDirectory, $"tray-{language}.png"), System.Drawing.Imaging.ImageFormat.Png);
+        }
+        foreach (var language in LocalizationService.AvailableLanguages.Where(option => option.Code != "Auto").Select(option => option.Code))
+        {
+            LocalizationService.ApplyLanguage(language);
+            var window = new SettingsWindow(new SettingsViewModel(new AppSettings(), _ => { }));
+            Capture(window, $"settings-{language}.png", 600, 760);
+            var scroller = (ScrollViewer)window.FindName("SettingsScroller");
+            var recorder = (TextBox)window.FindName("NewNoteHotkeyBox");
+            var bounds = recorder.TransformToAncestor((FrameworkElement)scroller.Content).TransformBounds(new Rect(new Point(), recorder.RenderSize));
+            scroller.ScrollToVerticalOffset(Math.Max(0, bounds.Top - 120));
+            Capture(window, $"shortcuts-{language}.png", 600, 760);
+            window.Close();
+        }
+        return 0;
     }
 
     private static int RenderPreview(string outputDirectory)

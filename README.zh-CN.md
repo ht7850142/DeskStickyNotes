@@ -124,6 +124,8 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 
 以下图片使用 0.6.0 编译后的真实控件与示例便签渲染，不包含私人便签数据。
 
+需要对外介绍软件时，可使用 [0.6.0 发布素材](assets/banners/desksticky-0.6.0/README.md)，内含中英文发布图、原始界面图和可编辑源文件。[发布指南](docs/PUBLISHING.md)整理了渠道优先级、核实依据及可直接修改使用的中英文稿件。
+
 ### 便签、设置和托盘
 
 ![DeskStickyNotes 0.6.0 界面总览：浅纸张便签、分组设置、全局快捷键及托盘菜单](docs/images/interface-overview.png)

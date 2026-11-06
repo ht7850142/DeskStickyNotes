@@ -7,6 +7,7 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 ## [Unreleased]
 
 - Updated the maintained development specification, bilingual introduction and usage guide, interface previews, and contribution documentation for the 0.6.0 feature set.
+- Added a reusable 0.6.0 press kit with bilingual launch graphics, high-resolution sample UI renders, editable composition/export sources, and a researched publishing guide with ready-to-edit drafts.
 
 ## [0.6.0] - 2026-11-06
 

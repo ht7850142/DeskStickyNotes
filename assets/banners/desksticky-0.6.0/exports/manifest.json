@@ -1,0 +1,169 @@
+{
+  "product": "DeskStickyNotes",
+  "version": "0.6.0",
+  "date": "2026-11-06",
+  "images": [
+    {
+      "lang": "zh",
+      "scene": "hero",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "zh-hero-1270x760.png",
+      "bytes": 102386
+    },
+    {
+      "lang": "zh",
+      "scene": "notes",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "zh-notes-1270x760.png",
+      "bytes": 100634
+    },
+    {
+      "lang": "zh",
+      "scene": "shortcuts",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "zh-shortcuts-1270x760.png",
+      "bytes": 109907
+    },
+    {
+      "lang": "zh",
+      "scene": "tray",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "zh-tray-1270x760.png",
+      "bytes": 92910
+    },
+    {
+      "lang": "zh",
+      "scene": "languages",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "zh-languages-1270x760.png",
+      "bytes": 128006
+    },
+    {
+      "lang": "zh",
+      "scene": "hero",
+      "format": "social",
+      "width": 1280,
+      "height": 640,
+      "name": "zh-social-1280x640.png",
+      "bytes": 87432
+    },
+    {
+      "lang": "zh",
+      "scene": "hero",
+      "format": "wide",
+      "width": 1920,
+      "height": 1080,
+      "name": "zh-wide-1920x1080.png",
+      "bytes": 147198
+    },
+    {
+      "lang": "en",
+      "scene": "hero",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "en-hero-1270x760.png",
+      "bytes": 106246
+    },
+    {
+      "lang": "en",
+      "scene": "notes",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "en-notes-1270x760.png",
+      "bytes": 104824
+    },
+    {
+      "lang": "en",
+      "scene": "shortcuts",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "en-shortcuts-1270x760.png",
+      "bytes": 113371
+    },
+    {
+      "lang": "en",
+      "scene": "tray",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "en-tray-1270x760.png",
+      "bytes": 92301
+    },
+    {
+      "lang": "en",
+      "scene": "languages",
+      "format": "ph",
+      "width": 1270,
+      "height": 760,
+      "name": "en-languages-1270x760.png",
+      "bytes": 137765
+    },
+    {
+      "lang": "en",
+      "scene": "hero",
+      "format": "social",
+      "width": 1280,
+      "height": 640,
+      "name": "en-social-1280x640.png",
+      "bytes": 89435
+    },
+    {
+      "lang": "en",
+      "scene": "hero",
+      "format": "wide",
+      "width": 1920,
+      "height": 1080,
+      "name": "en-wide-1920x1080.png",
+      "bytes": 144515
+    },
+    {
+      "lang": "zh",
+      "scene": "hero",
+      "format": "portrait",
+      "width": 1080,
+      "height": 1440,
+      "name": "zh-poster-1080x1440.png",
+      "bytes": 122691
+    },
+    {
+      "lang": "en",
+      "scene": "hero",
+      "format": "itch",
+      "width": 630,
+      "height": 500,
+      "name": "en-itch-cover-630x500.png",
+      "bytes": 42924
+    },
+    {
+      "lang": "en",
+      "scene": "logo",
+      "format": "ph",
+      "width": 240,
+      "height": 240,
+      "name": "thumbnail-240x240.png",
+      "bytes": 4940
+    },
+    {
+      "lang": "en",
+      "scene": "logo",
+      "format": "large",
+      "width": 512,
+      "height": 512,
+      "name": "icon-512x512.png",
+      "bytes": 11172
+    }
+  ]
+}
