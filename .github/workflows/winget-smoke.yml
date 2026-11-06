@@ -1,0 +1,72 @@
+name: Validate DeskStickyNotes WinGet package
+
+on:
+  push:
+    branches: [qa/winget-deskstickynotes-0.6.0]
+    paths:
+      - .github/workflows/winget-smoke.yml
+      - winget-validation/**
+
+permissions:
+  contents: read
+
+jobs:
+  install-uninstall:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install and uninstall the portable package from its local manifest
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+
+          $command = Get-Command winget.exe -ErrorAction SilentlyContinue
+          $version = if ($command) { & $command.Source --version 2>$null }
+          if ($version -notmatch '^v?(\d+\.\d+\.\d+)' -or [version]$Matches[1] -lt [version]'1.28.0') {
+            Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Scope CurrentUser -Force
+            Import-Module Microsoft.WinGet.Client
+            Repair-WinGetPackageManager -AllUsers
+            $command = Get-Command winget.exe -ErrorAction SilentlyContinue
+          }
+          if ($command) {
+            $wingetPath = $command.Source
+          } else {
+            $appInstaller = Get-AppxPackage -Name Microsoft.DesktopAppInstaller | Sort-Object Version -Descending | Select-Object -First 1
+            if (!$appInstaller) { throw 'App Installer is unavailable on the disposable runner.' }
+            $wingetPath = Join-Path $appInstaller.InstallLocation 'winget.exe'
+          }
+          & $wingetPath --version
+          if ($LASTEXITCODE -ne 0) { throw 'WinGet is not usable on the disposable runner.' }
+
+          $manifestPath = Join-Path $env:GITHUB_WORKSPACE 'winget-validation'
+          $packageRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages'
+          $linksRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'
+          $packageId = 'DeskStickyNotes.DeskStickyNotes'
+          & $wingetPath settings --enable LocalManifestFiles
+          if ($LASTEXITCODE -ne 0) { throw 'Local manifests could not be enabled in the test VM.' }
+          try {
+            & $wingetPath validate --manifest $manifestPath
+            if ($LASTEXITCODE -ne 0) { throw 'Manifest validation failed.' }
+            & $wingetPath install --manifest $manifestPath --scope user --silent --disable-interactivity --accept-package-agreements --accept-source-agreements
+            if ($LASTEXITCODE -ne 0) { throw 'Silent portable installation failed.' }
+
+            $installed = @(Get-ChildItem -LiteralPath $packageRoot -Filter 'DeskStickyNotes.exe' -File -Recurse)
+            $aliases = @(Get-ChildItem -LiteralPath $linksRoot -Filter 'DeskStickyNotes*' -File)
+            if ($installed.Count -ne 1 -or $aliases.Count -ne 1 -or $installed[0].VersionInfo.ProductVersion -notlike '0.6.0*') {
+              throw 'The expected portable executable and command alias were not installed.'
+            }
+            Write-Host "Verified executable version $($installed[0].VersionInfo.ProductVersion)."
+
+            & $wingetPath uninstall --id $packageId --exact --silent --disable-interactivity --accept-source-agreements
+            if ($LASTEXITCODE -ne 0) { throw 'Silent portable uninstallation failed.' }
+            if ((Test-Path -LiteralPath $installed[0].FullName) -or (Test-Path -LiteralPath $aliases[0].FullName)) {
+              throw 'The portable executable or command alias remained after uninstallation.'
+            }
+            Write-Host 'DeskStickyNotes 0.6.0 manifest install and uninstall verified.'
+          } finally {
+            & $wingetPath settings --disable LocalManifestFiles
+          }
