@@ -17,6 +17,8 @@ CHANGELOG.md
 
 Use the same version everywhere.
 
+Review the English/Chinese README, the maintained `docs/开发提示词.md` specification, and `docs/images/` previews when behavior or UI changes. Keep the download links, language list, shortcut defaults, and validation claims consistent with the release. The specification is a current product brief, not a verbatim transcript of the original development chat. Use sample content for documentation images.
+
 ## 2. Verify Build
 
 ```powershell

@@ -147,6 +147,8 @@ Notes are stored as local JSON. Important fields include:
 - `width`
 - `height`
 - `color`
+- `backgroundOpacity`
+- `textColorMode`
 - `topmost`
 - `visible`
 - `updatedAt`

@@ -6,6 +6,8 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
+- Updated the maintained development specification, bilingual introduction and usage guide, interface previews, and contribution documentation for the 0.6.0 feature set.
+
 ## [0.6.0] - 2026-11-06
 
 - Added customizable global shortcuts for creating a note and cycling through notes, including hidden, minimized, and collapsed notes. Defaults are Ctrl+Alt+N and Ctrl+Alt+PageDown.

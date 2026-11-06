@@ -15,7 +15,7 @@ Requirements:
 Run from source:
 
 ```powershell
-dotnet run
+dotnet run --project src/DeskStickyNotes/DeskStickyNotes.csproj
 ```
 
 Build:
@@ -36,7 +36,9 @@ Please check:
 
 - `dotnet build -c Release` passes.
 - `dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release` passes on Windows.
-- New UI text is added to both `src/DeskStickyNotes/Localization/Strings.en-US.xaml` and `src/DeskStickyNotes/Localization/Strings.zh-Hans.xaml`.
+- New UI text is translated in all seven `src/DeskStickyNotes/Localization/Strings.*.xaml` dictionaries: English, Simplified/Traditional Chinese, French, Spanish, Portuguese, and Japanese. Keep resource keys and format placeholders identical.
+- Shortcut changes preserve working registrations on conflict and restore hidden, minimized, and collapsed notes without changing saved pin preferences.
+- Update the English/Chinese README and `docs/开发提示词.md` when product behavior changes. Refresh affected `docs/images/` previews with sample data and check that descriptions match the shipped version.
 - The app still works without network access.
 - Note content and settings remain local.
 - Large binaries are not committed. Build outputs belong in `bin/`, `obj/`, or `artifacts/`.

@@ -1,14 +1,23 @@
 # DeskStickyNotes
 
-DeskStickyNotes is a lightweight, open-source, Win7-style sticky notes app for Windows 10/11.
+DeskStickyNotes is a lightweight, open-source desktop sticky notes app for Windows 10/11 x64, inspired by the Windows 7 sticky-note workflow.
 
-It is built for people who want notes to stay visible while they work: desktop-first sticky notes, per-note always-on-top, a compact draggable icon mode, tray management, local storage, and a clean native WPF interface.
+Keep a reminder in view, pin an important note, or jump between notes from the keyboard. DeskStickyNotes combines a native WPF paper-style interface, rich text, a compact draggable icon mode, tray management, and local storage without an account.
 
 中文文档: [README.zh-CN.md](README.zh-CN.md)
 
+## New In 0.6.0
+
+- Customizable global shortcuts: `Ctrl+Alt+N` creates a note; `Ctrl+Alt+PageDown` cycles through notes, including hidden, minimized, and collapsed ones.
+- Seven UI languages: English, Simplified Chinese, Traditional Chinese, French, Spanish, Portuguese, and Japanese.
+- Refreshed note controls, tray icons/menu, and settings with live appearance previews and a fixed Save/Cancel footer.
+- Coordinated desktop recovery avoids overlapping notes repeatedly competing for the top position; collapsing preserves each note's saved pin preference.
+
+[Download 0.6.0](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0) · [Changelog](CHANGELOG.md)
+
 ## AI-Assisted Development
 
-This project was initially generated with AI assistance, including the first implementation, UI iteration, documentation, and packaging workflow. The original Chinese development prompt is preserved in [docs/开发提示词.md](docs/开发提示词.md).
+This project uses AI assistance for implementation, UI iteration, documentation, and packaging. The maintained [Chinese development specification](docs/开发提示词.md) describes the current 0.6.0 behavior and engineering requirements; earlier revisions remain in Git history.
 
 ## Why
 
@@ -78,6 +87,10 @@ The default shortcuts are `Ctrl+Alt+N` to create a note and `Ctrl+Alt+PageDown` 
 
 Open **Settings → Global shortcuts**, click a shortcut field, and press the desired combination. Use Ctrl, Alt, or Win with another key; Shift is optional. Clear a field to disable that shortcut, or choose Reset to restore both defaults. Shortcuts pause while a field is recording. Save checks for duplicate or occupied combinations and keeps the previous working shortcuts if a replacement is unavailable.
 
+### Languages
+
+Choose **Auto**, **简体中文**, **繁體中文**, **English**, **Français**, **Español**, **Português**, or **日本語** in **Settings → Desktop & startup → Language**, then save. No restart is needed. Auto uses the Windows UI language, distinguishes Simplified and Traditional Chinese, and falls back to English for unsupported languages.
+
 ### Text slices
 
 - Select text in a note and use the document button in the editor toolbar to tuck it into a slice.
@@ -90,6 +103,8 @@ Open **Settings → Global shortcuts**, click a shortcut field, and press the de
 
 For end users, download [DeskStickyNotes 0.6.0 from GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0).
 
+Recommended: [installer with the .NET Desktop Runtime included](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotesSetup-0.6.0-runtime.exe). For a build without installation, choose the [self-contained portable ZIP](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip).
+
 | Package | Use when |
 | --- | --- |
 | `DeskStickyNotesSetup-*-fd.exe` | You already have the .NET 8 Desktop Runtime installed. Small installer. |
@@ -97,17 +112,30 @@ For end users, download [DeskStickyNotes 0.6.0 from GitHub Releases](https://git
 | `DeskStickyNotes-portable-*-fd.zip` | You want a portable build and already have the .NET 8 Desktop Runtime. |
 | `DeskStickyNotes-portable-*-runtime.zip` | You want a portable build that does not need a separate runtime install. |
 
-The installer lets users choose a custom install path and re-install over an existing installation.
+Exit the previous version from the tray before upgrading, then install over it. The installer supports a custom install path. Installed and portable builds both keep notes and settings in `%AppData%\DeskStickyNotes`; the portable ZIP does not store notes beside the executable. All four package checksums are listed in the release's SHA-256 manifest.
 
-## Screenshots
+## First Use
+
+1. Start the app; its icon appears in the notification area, and the first launch creates a note.
+2. Type to edit. Use `Ctrl+Alt+N` for another note and `Ctrl+Alt+PageDown` to cycle through notes.
+3. Pin a note above other windows, or use its dedicated collapse button to turn it into a draggable reminder. Click the title bar to keep editing, drag to move, and double-click or press F2 to rename.
+4. Right-click the tray icon to show/hide individual notes or open Settings for appearance, shortcuts, and language.
+
+## Interface Preview
+
+These images render the compiled 0.6.0 controls with sample notes. They contain no personal note data.
+
+### Notes, Settings, And Tray
+
+![DeskStickyNotes 0.6.0 overview showing a paper-style note, grouped settings, global shortcuts, and tray menu](docs/images/interface-overview.png)
 
 ### Note Window
 
 ![DeskStickyNotes sticky note window with rich text and todo items](docs/images/note-window.png)
 
-### Collapsed Icon Mode
+### Customizable Global Shortcuts
 
-![DeskStickyNotes collapsed draggable note icon](docs/images/collapsed-icon.png)
+![English settings for recording, clearing, and resetting global shortcuts, with the fixed Save/Cancel footer](docs/images/settings-hotkeys-en-US.png)
 
 ## Requirements
 
@@ -148,6 +176,12 @@ If `dotnet` is not recognized but the SDK is installed, restart your IDE or term
 
 ```powershell
 dotnet build -c Release
+```
+
+Run the Windows regression checks, including native window stacking, global shortcut registration/conflicts, local storage, and all seven language layouts:
+
+```powershell
+dotnet run --project tests/DeskStickyNotes.RegressionTests -c Release
 ```
 
 ## Package
@@ -209,6 +243,7 @@ src/DeskStickyNotes/   WPF app source code
   ViewModels/         MVVM view models and commands
   Views/              WPF windows
   Localization/       Complete resources for seven UI languages
+  Themes/             Shared control styles, states, and UI tokens
   Assets/             App icon files
 installer/            Inno Setup script and installer image
 scripts/              Packaging script
