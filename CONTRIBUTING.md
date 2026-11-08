@@ -57,6 +57,8 @@ After editing the native vector icon master, regenerate the shipped icon assets:
 ./scripts/build-icons.ps1
 ```
 
+Use `--render-scrollbars artifacts/qa-scrollbars` to render sample-only long notes, light text on a translucent note, a two-axis text preview, settings, and a before/after comparison. The legacy comparison changes styles only on the sample controls and never reads real notes.
+
 Before releasing shell-behavior changes, manually check two overlapping pinned notes and a mixed pinned/unpinned pair with Win+D, clicking the desktop, switching between notes, intentional taskbar minimization, and the keep-after-Win+D setting disabled. Native regression checks do not reproduce Explorer's complete Show Desktop behavior.
 
 ## Code Style

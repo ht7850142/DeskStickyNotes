@@ -6,6 +6,8 @@ DeskStickyNotes 是一个轻量、开源的 Windows 10/11 x64 桌面便签工具
 
 English: [README.md](README.md)
 
+**当前版本：0.6.1** — 统一优化便签、设置和全文预览的滚动条：细圆角滑块、更宽的拖动区域，保留原生滚动操作。[查看前后对比](docs/images/scrollbar-comparison.png)。
+
 ## 0.6.0 更新
 
 - 可自定义全局快捷键：默认 `Ctrl+Alt+N` 新建，`Ctrl+Alt+PageDown` 循环切换，隐藏、最小化和折叠的便签也可直接唤出。
@@ -13,11 +15,11 @@ English: [README.md](README.md)
 - 更新便签控件、右下角托盘图标与菜单、设置界面，加入外观预览和固定保存/取消栏。
 - 统一协调桌面恢复，避免重叠便签反复争抢置顶而闪烁；折叠图标保留原有置顶偏好。
 
-[下载 0.6.0](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0) · [完整更新记录](CHANGELOG.md)
+[下载 0.6.1](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.1) · [完整更新记录](CHANGELOG.md)
 
 ## AI 辅助开发
 
-本项目使用 AI 辅助完成实现、UI 迭代、文档和打包。[开发提示词](docs/开发提示词.md)随版本维护，说明当前 0.6.0 的产品行为、交互和工程要求，并非原始对话的逐字记录；历史修订保留在 Git 中。
+本项目使用 AI 辅助完成实现、UI 迭代、文档和打包。[开发提示词](docs/开发提示词.md)随版本维护，说明当前 0.6.1 的产品行为、交互和工程要求，并非原始对话的逐字记录；历史修订保留在 Git 中。
 
 ## 项目定位
 
@@ -100,9 +102,9 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 
 ## 下载安装
 
-从 [GitHub Releases 下载 DeskStickyNotes 0.6.0](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0)。
+从 [GitHub Releases 下载 DeskStickyNotes 0.6.1](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.1)。
 
-推荐使用[内置 .NET Desktop Runtime 的安装包](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotesSetup-0.6.0-runtime.exe)。不想安装时可选择[自包含绿色版 ZIP](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip)。
+推荐使用[内置 .NET Desktop Runtime 的安装包](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.1/DeskStickyNotesSetup-0.6.1-runtime.exe)。不想安装时可选择[自包含绿色版 ZIP](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.1/DeskStickyNotes-portable-0.6.1-win-x64-runtime.zip)。
 
 | 包 | 适合场景 |
 | --- | --- |
@@ -122,13 +124,13 @@ Windows 11 自带 Sticky Notes 更像普通应用窗口。DeskStickyNotes 的定
 
 ## 界面预览
 
-以下图片使用 0.6.0 编译后的真实控件与示例便签渲染，不包含私人便签数据。
+以下图片使用 0.6.1 编译后的真实控件与示例便签渲染，不包含私人便签数据。
 
 需要对外介绍软件时，可使用 [0.6.0 发布素材](assets/banners/desksticky-0.6.0/README.md)，内含中英文发布图、原始界面图和可编辑源文件。[发布指南](docs/PUBLISHING.md)整理了渠道优先级、核实依据及可直接修改使用的中英文稿件。
 
 ### 便签、设置和托盘
 
-![DeskStickyNotes 0.6.0 界面总览：浅纸张便签、分组设置、全局快捷键及托盘菜单](docs/images/interface-overview.png)
+![DeskStickyNotes 0.6.1 界面总览：浅纸张便签、分组设置、全局快捷键及托盘菜单](docs/images/interface-overview.png)
 
 ### 便签窗口
 
@@ -187,11 +189,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 当前输出：
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.6.0-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.6.0-runtime.exe
-artifacts\installer\DeskStickyNotes-0.6.0-SHA256SUMS.txt
+artifacts\installer\DeskStickyNotes-portable-0.6.1-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.6.1-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.6.1-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.6.1-runtime.exe
+artifacts\installer\DeskStickyNotes-0.6.1-SHA256SUMS.txt
 ```
 
 生成内置运行时的安装包时，打包脚本会自动下载并校验缺失的运行时安装器：

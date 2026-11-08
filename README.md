@@ -6,6 +6,8 @@ Keep a reminder in view, pin an important note, or jump between notes from the k
 
 中文文档: [README.zh-CN.md](README.zh-CN.md)
 
+**Latest: 0.6.1** — Slim rounded scrollbars across notes, settings, and text previews, with a wider pointer target and preserved native scrolling behavior. [Before / after](docs/images/scrollbar-comparison.png).
+
 ## New In 0.6.0
 
 - Customizable global shortcuts: `Ctrl+Alt+N` creates a note; `Ctrl+Alt+PageDown` cycles through notes, including hidden, minimized, and collapsed ones.
@@ -13,11 +15,11 @@ Keep a reminder in view, pin an important note, or jump between notes from the k
 - Refreshed note controls, tray icons/menu, and settings with live appearance previews and a fixed Save/Cancel footer.
 - Coordinated desktop recovery avoids overlapping notes repeatedly competing for the top position; collapsing preserves each note's saved pin preference.
 
-[Download 0.6.0](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0) · [Changelog](CHANGELOG.md)
+[Download 0.6.1](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.1) · [Changelog](CHANGELOG.md)
 
 ## AI-Assisted Development
 
-This project uses AI assistance for implementation, UI iteration, documentation, and packaging. The maintained [Chinese development specification](docs/开发提示词.md) describes the current 0.6.0 behavior and engineering requirements; earlier revisions remain in Git history.
+This project uses AI assistance for implementation, UI iteration, documentation, and packaging. The maintained [Chinese development specification](docs/开发提示词.md) describes the current 0.6.1 behavior and engineering requirements; earlier revisions remain in Git history.
 
 ## Why
 
@@ -101,9 +103,9 @@ Choose **Auto**, **简体中文**, **繁體中文**, **English**, **Français**,
 
 ## Download
 
-For end users, download [DeskStickyNotes 0.6.0 from GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.0).
+For end users, download [DeskStickyNotes 0.6.1 from GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/tag/v0.6.1).
 
-Recommended: [installer with the .NET Desktop Runtime included](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotesSetup-0.6.0-runtime.exe). For a build without installation, choose the [self-contained portable ZIP](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.0/DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip).
+Recommended: [installer with the .NET Desktop Runtime included](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.1/DeskStickyNotesSetup-0.6.1-runtime.exe). For a build without installation, choose the [self-contained portable ZIP](https://github.com/ht7850142/DeskStickyNotes/releases/download/v0.6.1/DeskStickyNotes-portable-0.6.1-win-x64-runtime.zip).
 
 | Package | Use when |
 | --- | --- |
@@ -123,13 +125,13 @@ Exit the previous version from the tray before upgrading, then install over it. 
 
 ## Interface Preview
 
-These images render the compiled 0.6.0 controls with sample notes. They contain no personal note data.
+These images render the compiled 0.6.1 controls with sample notes. They contain no personal note data.
 
 For reusable launch images, raw UI captures, and editable sources, see the [0.6.0 press kit](assets/banners/desksticky-0.6.0/README.md). The [publishing guide](docs/PUBLISHING.md) includes a researched channel shortlist and Chinese/English submission drafts.
 
 ### Notes, Settings, And Tray
 
-![DeskStickyNotes 0.6.0 overview showing a paper-style note, grouped settings, global shortcuts, and tray menu](docs/images/interface-overview.png)
+![DeskStickyNotes 0.6.1 overview showing a paper-style note, grouped settings, global shortcuts, and tray menu](docs/images/interface-overview.png)
 
 ### Note Window
 
@@ -203,11 +205,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\package.ps1 -AllInstallers
 Current package names:
 
 ```text
-artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-fd.zip
-artifacts\installer\DeskStickyNotes-portable-0.6.0-win-x64-runtime.zip
-artifacts\installer\DeskStickyNotesSetup-0.6.0-fd.exe
-artifacts\installer\DeskStickyNotesSetup-0.6.0-runtime.exe
-artifacts\installer\DeskStickyNotes-0.6.0-SHA256SUMS.txt
+artifacts\installer\DeskStickyNotes-portable-0.6.1-win-x64-fd.zip
+artifacts\installer\DeskStickyNotes-portable-0.6.1-win-x64-runtime.zip
+artifacts\installer\DeskStickyNotesSetup-0.6.1-fd.exe
+artifacts\installer\DeskStickyNotesSetup-0.6.1-runtime.exe
+artifacts\installer\DeskStickyNotes-0.6.1-SHA256SUMS.txt
 ```
 
 The packaging script downloads and verifies the Microsoft runtime installer automatically when it is missing:

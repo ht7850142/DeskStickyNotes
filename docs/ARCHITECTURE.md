@@ -180,6 +180,8 @@ Recovery does not continuously enforce a note's position within its z-order band
 
 ## Settings and Icon Assets
 
+Shared scrollbar templates keep WPF's `ScrollBar`, `Track`, page commands, and proportional dragging. Only the grip is 4 DIPs wide (6 on hover/drag); the pointer target remains 16 DIPs. The rail and arrow controls are transparent. Notes bind the grip color to their text foreground so translucent notes with light text remain usable. The native scrolling checks exercise vertical/horizontal paging and drag events, mouse-wheel offsets, selection retention, automatic visibility, and preview wrapping.
+
 Settings edit a view-model draft until Save. Color selection updates a sample note, and the font-size slider updates the sample text. The body scrolls independently of the Save/Cancel footer, and the window fits the current work area. Color and default pinning affect new notes; font size retains the existing application-wide behavior. Escape cancels.
 
 Shortcut fields record combinations directly, provide clear/reset controls, and retain Tab navigation. Save validates and registers the complete pair before committing the draft. A localized error stays above the fixed footer when a combination is invalid, duplicated, or occupied; the settings window remains open for correction. All seven locales have key/placeholder contract checks and compiled WPF layout coverage.

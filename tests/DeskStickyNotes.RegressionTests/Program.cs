@@ -22,6 +22,8 @@ using Button = System.Windows.Controls.Button;
 using TextBox = System.Windows.Controls.TextBox;
 using RichTextBox = System.Windows.Controls.RichTextBox;
 using ListBox = System.Windows.Controls.ListBox;
+using ScrollBar = System.Windows.Controls.Primitives.ScrollBar;
+using Orientation = System.Windows.Controls.Orientation;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 using Forms = System.Windows.Forms;
@@ -33,6 +35,7 @@ internal static class Program
     {
         if (args.Length == 2 && args[0] == "--render-preview") return RenderPreview(args[1]);
         if (args.Length == 2 && args[0] == "--render-press-assets") return RenderPressAssets(args[1]);
+        if (args.Length == 2 && args[0] == "--render-scrollbars") return RenderScrollbarPreview(args[1]);
         var tests = new (string Name, Action Run)[]
         {
             ("All eight resize handles move the requested edges", ResizeEveryEdge),
@@ -61,7 +64,7 @@ internal static class Program
             ("Shortcut settings persist and old settings retain usable defaults", PersistHotkeys),
             ("Shortcut validation keeps settings open without saving a failed draft", RejectHotkeyDraft),
             ("Language selection resolves regional variants and canonical codes", ResolveLanguages),
-            ("Window names, compact layout, editor feedback, settings layout, pin preference, and native stacking", WindowCollapseRestore)
+            ("Window names, compact layout, editor feedback, scrolling, settings layout, pin preference, and native stacking", WindowCollapseRestore)
         };
 
         var failures = 0;
@@ -525,12 +528,89 @@ internal static class Program
         };
         Assert(chineseResources["TipResizeNote"] is string, "Missing Chinese resize hint.");
         VerifyEditorFeedback(window);
+        VerifyScrollbars();
         VerifyLanguages();
         VerifySettingsLayout();
         VerifyNativeHotkeys();
         VerifyNativeStacking(window);
         window.CloseForApplication();
         VerifyShortcutNavigation(app);
+    }
+
+    private static void VerifyScrollbars()
+    {
+        static void Layout(Window window, int width, int height)
+        {
+            var root = (FrameworkElement)window.Content;
+            root.Measure(new Size(width, height));
+            root.Arrange(new Rect(0, 0, width, height));
+            root.UpdateLayout();
+        }
+        static Track TrackFor(ScrollViewer viewer, Orientation orientation) =>
+            (Track)Descendants<ScrollBar>(viewer).Single(bar => bar.Orientation == orientation).Template.FindName("PART_Track",
+                Descendants<ScrollBar>(viewer).Single(bar => bar.Orientation == orientation));
+        static void Page(Track track, bool forward)
+        {
+            var button = forward ? track.IncreaseRepeatButton : track.DecreaseRepeatButton;
+            Assert(button is not null && !button.Focusable && button.Command is not null, "Scroll paging must keep editor focus.");
+            ((RoutedCommand)button!.Command!).Execute(button.CommandParameter, button.CommandTarget);
+        }
+        var model = new NoteModel { TextContent = string.Join('\n', Enumerable.Range(1, 100).Select(i => $"Sample line {i}: keep this note editable.")) };
+        var note = new NoteWindow(new NoteViewModel(model, 15));
+        var preview = new TextClipPreviewWindow(new TextClipModel { Title = "Scroll regression", Content = string.Join('\n', Enumerable.Range(1, 100).Select(i => $"{i}: " + new string('x', 180))) });
+        try
+        {
+            Layout(note, 540, 420);
+            var editor = (RichTextBox)note.FindName("Editor");
+            var viewer = Descendants<ScrollViewer>(editor).First();
+            Assert(viewer.ScrollableHeight > 0, "Long notes cannot scroll.");
+            editor.SelectAll();
+            var selection = editor.Selection.Text;
+            editor.ScrollToHome();
+            Layout(note, 540, 420);
+            var track = TrackFor(viewer, Orientation.Vertical);
+            Page(track, true);
+            Layout(note, 540, 420);
+            Assert(viewer.VerticalOffset > 0, "Clicking below the grip did not page the note down.");
+            Page(track, false);
+            Layout(note, 540, 420);
+            Equal(0d, viewer.VerticalOffset);
+            track.Thumb.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
+            track.Thumb.RaiseEvent(new DragDeltaEventArgs(0, 35) { RoutedEvent = Thumb.DragDeltaEvent });
+            track.Thumb.RaiseEvent(new DragCompletedEventArgs(0, 35, false) { RoutedEvent = Thumb.DragCompletedEvent });
+            Layout(note, 540, 420);
+            Assert(viewer.VerticalOffset > 0, "Dragging the new grip did not move the note content.");
+            Equal(selection, editor.Selection.Text);
+            var beforeWheel = viewer.VerticalOffset;
+            viewer.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120) { RoutedEvent = UIElement.MouseWheelEvent });
+            Layout(note, 540, 420);
+            Assert(viewer.VerticalOffset > beforeWheel, "Mouse-wheel scrolling regressed.");
+            editor.Document.Blocks.Clear();
+            editor.Document.Blocks.Add(new Paragraph(new Run("Short note")));
+            Layout(note, 540, 420);
+            Equal(Visibility.Collapsed, viewer.ComputedVerticalScrollBarVisibility);
+
+            Layout(preview, 720, 560);
+            var text = (TextBox)preview.FindName("ContentTextBox");
+            var textViewer = Descendants<ScrollViewer>(text).First();
+            Assert(textViewer.ScrollableWidth > 0 && textViewer.ScrollableHeight > 0, "Preview cannot scroll in both orientations.");
+            var horizontal = TrackFor(textViewer, Orientation.Horizontal);
+            Page(horizontal, true);
+            Layout(preview, 720, 560);
+            Assert(textViewer.HorizontalOffset > 0, "Horizontal paging moves the wrong direction.");
+            Page(horizontal, false);
+            Layout(preview, 720, 560);
+            Equal(0d, textViewer.HorizontalOffset);
+            horizontal.Thumb.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
+            horizontal.Thumb.RaiseEvent(new DragDeltaEventArgs(35, 0) { RoutedEvent = Thumb.DragDeltaEvent });
+            horizontal.Thumb.RaiseEvent(new DragCompletedEventArgs(35, 0, false) { RoutedEvent = Thumb.DragCompletedEvent });
+            Layout(preview, 720, 560);
+            Assert(textViewer.HorizontalOffset > 0, "Horizontal dragging did not move preview content.");
+            ((System.Windows.Controls.CheckBox)preview.FindName("WrapTextCheckBox")).IsChecked = true;
+            Layout(preview, 720, 560);
+            Equal(Visibility.Collapsed, textViewer.ComputedHorizontalScrollBarVisibility);
+        }
+        finally { note.CloseForApplication(); preview.Close(); }
     }
 
     private static void VerifyLanguages()
@@ -847,6 +927,70 @@ internal static class Program
         timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
         timer.Start();
         Dispatcher.PushFrame(frame);
+    }
+
+    private static int RenderScrollbarPreview(string outputDirectory)
+    {
+        var app = new RegressionApp();
+        LocalizationService.ApplyLanguage("zh-Hans");
+        Directory.CreateDirectory(outputDirectory);
+        void Capture(Window window, string filename, int width, int height, bool legacy = false, bool dark = false)
+        {
+            var root = (FrameworkElement)window.Content;
+            root.Measure(new Size(width, height));
+            root.Arrange(new Rect(0, 0, width, height));
+            root.UpdateLayout();
+            if (legacy)
+            {
+                foreach (var bar in Descendants<ScrollBar>(root)) bar.Style = new Style(typeof(ScrollBar));
+                root.UpdateLayout();
+            }
+            var visual = new DrawingVisual();
+            using (var context = visual.RenderOpen())
+            {
+                context.DrawRectangle((SolidColorBrush)new BrushConverter().ConvertFromString(dark ? "#202827" : "#EFF2EA")!, null, new Rect(0, 0, width, height));
+                context.DrawRectangle(new VisualBrush(root), null, new Rect(0, 0, width, height));
+            }
+            var bitmap = new RenderTargetBitmap(width * 2, height * 2, 192, 192, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = File.Create(Path.Combine(outputDirectory, filename));
+            encoder.Save(stream);
+        }
+        var content = "把事情记下来，然后慢慢完成。\n\n" + string.Join("\n\n", Enumerable.Range(1, 22).Select(i => $"{i:00} · 一点想法，一条提醒\n用清晰的小步骤，安排今天的工作与生活。"));
+        foreach (var (filename, legacy, dark) in new[] { ("note-before.png", true, false), ("note-after.png", false, false), ("note-dark.png", false, true) })
+        {
+            var window = new NoteWindow(new NoteViewModel(new NoteModel { Title = "记录 · 长便签示例", Width = 540, Height = 500,
+                TextContent = content, BackgroundOpacity = dark ? 0.3 : 1,
+                TextColorMode = dark ? NoteTextColorMode.Light : NoteTextColorMode.Auto }, 15));
+            Capture(window, filename, 540, 500, legacy, dark);
+            window.CloseForApplication();
+        }
+        var preview = new TextClipPreviewWindow(new TextClipModel { Title = "文本切片 · 长行与多行示例", Content = string.Join('\n', Enumerable.Range(1, 60).Select(i => $"第 {i:00} 行：长文本可横向、纵向滚动。" + new string('x', 100))) });
+        Capture(preview, "text-preview.png", 720, 560);
+        preview.Close();
+        var settings = new SettingsWindow(new SettingsViewModel(new AppSettings(), _ => { }));
+        Capture(settings, "settings.png", 600, 760);
+        settings.Close();
+        var board = new DrawingVisual();
+        using (var context = board.RenderOpen())
+        {
+            context.DrawRectangle((SolidColorBrush)new BrushConverter().ConvertFromString("#EFF2EA")!, null, new Rect(0, 0, 1160, 600));
+            foreach (var (file, label, x) in new[] { ("note-before.png", "旧版 · 系统滚动条", 24d), ("note-after.png", "新版 · 细圆角滑块", 596d) })
+            {
+                context.DrawText(new FormattedText(label, CultureInfo.GetCultureInfo("zh-CN"), System.Windows.FlowDirection.LeftToRight,
+                    new Typeface("Microsoft YaHei UI"), 20, (System.Windows.Media.Brush)app.FindResource("TextPrimaryBrush"), 1), new Point(x + 8, 22));
+                context.DrawImage(new BitmapImage(new Uri(Path.GetFullPath(Path.Combine(outputDirectory, file)))), new Rect(x, 65, 540, 500));
+            }
+        }
+        var comparison = new RenderTargetBitmap(2320, 1200, 192, 192, PixelFormats.Pbgra32);
+        comparison.Render(board);
+        var output = new PngBitmapEncoder();
+        output.Frames.Add(BitmapFrame.Create(comparison));
+        using var comparisonFile = File.Create(Path.Combine(outputDirectory, "scrollbar-comparison.png"));
+        output.Save(comparisonFile);
+        return 0;
     }
 
     private static int RenderPressAssets(string outputDirectory)

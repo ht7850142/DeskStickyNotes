@@ -295,6 +295,9 @@
                              SelectionChanged="Editor_SelectionChanged"
                              TextChanged="Editor_TextChanged">
                     <RichTextBox.Resources>
+                        <Style TargetType="ScrollBar" BasedOn="{StaticResource QuietScrollBarStyle}">
+                            <Setter Property="Foreground" Value="{Binding TextForegroundHex}" />
+                        </Style>
                         <Style TargetType="Paragraph">
                             <Setter Property="Margin" Value="0,0,0,8" />
                             <Setter Property="LineHeight" Value="22" />

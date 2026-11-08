@@ -6,6 +6,12 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-08
+
+- Replaced system-style scrollbar rails and arrows with slim rounded grips across notes, settings, and text-slice previews. The visible grip grows from 4 to 6 DIPs on hover/drag while retaining a stable 16-DIP pointer target.
+- Note scrollbars follow the selected text color, including translucent notes with light text. High-contrast mode uses a fully opaque grip.
+- Preserved native track paging, proportional thumb dragging, mouse-wheel scrolling, editor selection, and automatic hiding when content fits. Text previews retain horizontal scrolling and hide it when wrapping is enabled.
+- Added native scrolling regression checks and a sample-only before/after renderer.
 - Updated the maintained development specification, bilingual introduction and usage guide, interface previews, and contribution documentation for the 0.6.0 feature set.
 - Added a reusable 0.6.0 press kit with bilingual launch graphics, high-resolution sample UI renders, editable composition/export sources, and a researched publishing guide with ready-to-edit drafts.
 
