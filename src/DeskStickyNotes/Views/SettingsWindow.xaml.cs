@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Controls;
+using TextBox = System.Windows.Controls.TextBox;
 using DeskStickyNotes.Models;
 using DeskStickyNotes.Services;
 using DeskStickyNotes.ViewModels;
@@ -26,7 +26,7 @@ public partial class SettingsWindow : Window
         MinWidth = Math.Min(MinWidth, Width);
         _viewModel.CloseRequested += OnCloseRequested;
         Deactivated += (_, _) => SetCapture(false);
-        Activated += (_, _) => SetCapture(NewNoteHotkeyBox.IsKeyboardFocusWithin || NextNoteHotkeyBox.IsKeyboardFocusWithin);
+        Activated += (_, _) => SetCapture(Keyboard.FocusedElement is TextBox { IsReadOnly: true } box && box.Style == FindResource("HotkeyEntryStyle"));
     }
 
     protected override void OnClosed(EventArgs e)
@@ -66,7 +66,6 @@ public partial class SettingsWindow : Window
         if (key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None) value = "";
         else if (HotkeyGesture.TryCreate(Keyboard.Modifiers, key, out var gesture)) value = gesture.ToString();
         else { _viewModel.SetHotkeyError(LocalizationService.Get("HotkeyInvalid")); return; }
-        if (ReferenceEquals(sender, NewNoteHotkeyBox)) _viewModel.NewNoteHotkey = value;
-        else _viewModel.NextNoteHotkey = value;
+        ((TextBox)sender).SetCurrentValue(TextBox.TextProperty, value);
     }
 }

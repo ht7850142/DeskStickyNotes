@@ -149,6 +149,19 @@
     <sys:String x:Key="HotkeyReset">Repor</sys:String>
     <sys:String x:Key="HotkeyNotSet">Não definido — prima um atalho</sys:String>
     <sys:String x:Key="HotkeyInvalid">Combine Ctrl, Alt ou Win com outra tecla.</sys:String>
-    <sys:String x:Key="HotkeyDuplicate">Escolha atalhos diferentes para criar notas e alternar entre elas.</sys:String>
+    <sys:String x:Key="TrayPinList">Fixar notas por nome</sys:String>
+    <sys:String x:Key="PinThisNote">Fixar esta nota</sys:String>
+    <sys:String x:Key="UnpinThisNote">Desafixar esta nota</sys:String>
+    <sys:String x:Key="PinAllNotes">Fixar todas as notas</sys:String>
+    <sys:String x:Key="UnpinAllNotes">Desafixar todas as notas</sys:String>
+    <sys:String x:Key="PinnedLabel">Fixada</sys:String>
+    <sys:String x:Key="SettingPinNoteHotkey">Fixar ou recuperar uma nota</sys:String>
+    <sys:String x:Key="SettingPinAllHotkey">Fixar ou desafixar todas as notas</sys:String>
+    <sys:String x:Key="HotkeyPinHint">Noutra aplicação, o atalho abre a última nota para escrever. Prima-o novamente na nota para a desafixar.</sys:String>
+    <sys:String x:Key="EditCut">Cortar</sys:String>
+    <sys:String x:Key="EditCopy">Copiar</sys:String>
+    <sys:String x:Key="EditPaste">Colar</sys:String>
+    <sys:String x:Key="EditSelectAll">Selecionar tudo</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">Escolha um atalho diferente para cada ação.</sys:String>
     <sys:String x:Key="HotkeyUnavailable">{0} não está disponível ou está a ser usado por outra aplicação. Escolha outra combinação nas Definições.</sys:String>
 </ResourceDictionary>

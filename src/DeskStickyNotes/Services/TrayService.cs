@@ -1,10 +1,11 @@
 using Drawing = System.Drawing;
 using Forms = System.Windows.Forms;
 using System.Globalization;
+using DeskStickyNotes.Models;
 
 namespace DeskStickyNotes.Services;
 
-public sealed record TrayNote(Guid Id, string Title, bool Visible);
+public sealed record TrayNote(Guid Id, string Title, bool Visible, bool Pinned);
 
 public sealed class TrayService : IDisposable
 {
@@ -15,6 +16,11 @@ public sealed class TrayService : IDisposable
     private readonly Action _exit;
     private readonly Func<IReadOnlyList<TrayNote>> _getNotes;
     private readonly Action<Guid, bool> _setNoteVisibility;
+    private readonly Action<Guid, bool> _setNotePinned;
+    private readonly Action<bool> _setAllPinned;
+    private readonly Func<AppSettings> _getSettings;
+    private Forms.ToolStripMenuItem? _pinListItem;
+    private Forms.ToolStripMenuItem? _pinAllItem;
     private Forms.NotifyIcon? _notifyIcon;
     private Drawing.Icon? _ownedIcon;
     private Forms.ToolStripMenuItem? _newNoteItem;
@@ -37,7 +43,10 @@ public sealed class TrayService : IDisposable
         Action showSettings,
         Action exit,
         Func<IReadOnlyList<TrayNote>> getNotes,
-        Action<Guid, bool> setNoteVisibility)
+        Action<Guid, bool> setNoteVisibility,
+        Action<Guid, bool> setNotePinned,
+        Action<bool> setAllPinned,
+        Func<AppSettings> getSettings)
     {
         _newNote = newNote;
         _showAllNotes = showAllNotes;
@@ -46,6 +55,9 @@ public sealed class TrayService : IDisposable
         _exit = exit;
         _getNotes = getNotes;
         _setNoteVisibility = setNoteVisibility;
+        _setNotePinned = setNotePinned;
+        _setAllPinned = setAllPinned;
+        _getSettings = getSettings;
     }
 
     public void Show()
@@ -92,14 +104,16 @@ public sealed class TrayService : IDisposable
         };
         _newNoteItem = new Forms.ToolStripMenuItem("", null, (_, _) => _newNote());
         _noteListItem = new Forms.ToolStripMenuItem();
+        _pinListItem = new Forms.ToolStripMenuItem();
+        _pinAllItem = new Forms.ToolStripMenuItem("", null, (_, _) => _setAllPinned(_pinAllItem!.Tag is true));
         _showAllItem = new Forms.ToolStripMenuItem("", null, (_, _) => _showAllNotes());
         _hideAllItem = new Forms.ToolStripMenuItem("", null, (_, _) => _hideAllNotes());
         _settingsItem = new Forms.ToolStripMenuItem("", null, (_, _) => _showSettings());
         _exitItem = new Forms.ToolStripMenuItem("", null, (_, _) => _exit());
 
-        var actionItems = new[] { _newNoteItem, _noteListItem, _showAllItem, _hideAllItem, _settingsItem, _exitItem };
+        var actionItems = new[] { _newNoteItem, _noteListItem, _showAllItem, _hideAllItem, _pinListItem, _pinAllItem, _settingsItem, _exitItem };
         var glyphs = new[] { TrayMenuVisuals.Glyph.New, TrayMenuVisuals.Glyph.Notes, TrayMenuVisuals.Glyph.Show,
-            TrayMenuVisuals.Glyph.Hide, TrayMenuVisuals.Glyph.Settings, TrayMenuVisuals.Glyph.Exit };
+            TrayMenuVisuals.Glyph.Hide, TrayMenuVisuals.Glyph.Pin, TrayMenuVisuals.Glyph.PinAll, TrayMenuVisuals.Glyph.Settings, TrayMenuVisuals.Glyph.Exit };
         for (var index = 0; index < actionItems.Length; index++)
         {
             var image = TrayMenuVisuals.CreateGlyph(glyphs[index]);
@@ -113,6 +127,9 @@ public sealed class TrayService : IDisposable
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(_newNoteItem);
         menu.Items.Add(_noteListItem);
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add(_pinListItem);
+        menu.Items.Add(_pinAllItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(_showAllItem);
         menu.Items.Add(_hideAllItem);
@@ -128,12 +145,15 @@ public sealed class TrayService : IDisposable
 
     internal void RefreshNoteList()
     {
-        if (_noteListItem is null) return;
-        while (_noteListItem.DropDownItems.Count > 0)
+        if (_noteListItem is null || _pinListItem is null || _pinAllItem is null) return;
+        foreach (var list in new[] { _noteListItem, _pinListItem })
         {
-            var item = _noteListItem.DropDownItems[0];
-            _noteListItem.DropDownItems.RemoveAt(0);
-            item.Dispose();
+            while (list.DropDownItems.Count > 0)
+            {
+                var item = list.DropDownItems[0];
+                list.DropDownItems.RemoveAt(0);
+                item.Dispose();
+            }
         }
 
         var notes = _getNotes();
@@ -146,6 +166,13 @@ public sealed class TrayService : IDisposable
         }
         if (_showAllItem is not null) _showAllItem.Enabled = notes.Count > 0;
         if (_hideAllItem is not null) _hideAllItem.Enabled = notes.Any(note => note.Visible);
+        var pinAll = notes.Any(note => !note.Pinned);
+        _pinAllItem.Enabled = notes.Count > 0;
+        _pinAllItem.Tag = pinAll;
+        _pinAllItem.Text = LocalizationService.Get(notes.Count == 0 || pinAll ? "PinAllNotes" : "UnpinAllNotes");
+        _pinAllItem.ShortcutKeyDisplayString = _getSettings().PinAllHotkey;
+        _pinListItem.Text = LocalizationService.Get("TrayPinList");
+        _pinListItem.Enabled = notes.Count > 0;
         _noteListItem.Text = $"{LocalizationService.Get("TrayNoteList")} ({notes.Count})";
         if (notes.Count == 0)
         {
@@ -170,6 +197,16 @@ public sealed class TrayService : IDisposable
                 ToolTipText = $"{title}\n{LocalizationService.Get(note.Visible ? "TrayToggleHide" : "TrayToggleShow")}"
             };
             _noteListItem.DropDownItems.Add(noteItem);
+            var pinItem = new Forms.ToolStripMenuItem(noteItem.Text, null, (_, _) => _setNotePinned(note.Id, !note.Pinned))
+            {
+                Checked = note.Pinned,
+                Tag = note.Id,
+                Padding = noteItem.Padding,
+                AccessibleName = title,
+                AccessibleDescription = LocalizationService.Get(note.Pinned ? "UnpinThisNote" : "PinThisNote"),
+                ToolTipText = title
+            };
+            _pinListItem.DropDownItems.Add(pinItem);
         }
     }
 
@@ -196,6 +233,7 @@ public sealed class TrayService : IDisposable
         if (_newNoteItem is not null)
         {
             _newNoteItem.Text = LocalizationService.Get("TrayNewNote");
+            _newNoteItem.ShortcutKeyDisplayString = _getSettings().NewNoteHotkey;
         }
 
         if (_showAllItem is not null)

@@ -195,16 +195,59 @@
         </Style.Triggers>
     </Style>
 
-    <Style x:Key="TopmostButtonStyle" TargetType="Button"
-           BasedOn="{StaticResource IconButtonStyle}">
+    <Geometry x:Key="NotePinGeometry">M5,2 H13 L12,4 V8 L14,10 V11 H4 V10 L6,8 V4 Z M9,11 V16</Geometry>
+    <Style x:Key="TopmostButtonStyle" TargetType="ToggleButton">
+        <Setter Property="MinWidth" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Margin" Value="2,0" />
+        <Setter Property="Padding" Value="6,0" />
+        <Setter Property="Foreground" Value="{StaticResource NoteControlBrush}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="ToolTip" Value="{DynamicResource TipAlwaysOnTop}" />
-        <Setter Property="Selector.IsSelected" Value="{Binding Topmost}" />
+        <Setter Property="AutomationProperties.Name" Value="{DynamicResource PinThisNote}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="PinSurface" CornerRadius="6" Background="{TemplateBinding Background}"
+                            BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Path x:Name="Pin" Width="13" Height="15" Stretch="Uniform"
+                                  Data="{StaticResource NotePinGeometry}" RenderTransformOrigin="0.5,0.5"
+                                  Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                  StrokeLineJoin="Round" StrokeEndLineCap="Round">
+                                <Path.RenderTransform><RotateTransform Angle="32" /></Path.RenderTransform>
+                            </Path>
+                            <TextBlock x:Name="PinLabel" Margin="5,0,1,0" VerticalAlignment="Center"
+                                       Text="{DynamicResource PinnedLabel}" FontFamily="{DynamicResource UiFontFamily}"
+                                       FontSize="11" FontWeight="SemiBold" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PinSurface" Property="Background" Value="{StaticResource NoteHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="PinSurface" Property="Background" Value="{StaticResource NotePinnedBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter TargetName="Pin" Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="Pin" Property="RenderTransform" Value="{x:Static Transform.Identity}" />
+                            <Setter TargetName="PinLabel" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="PinSurface" Property="Opacity" Value="0.80" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="PinSurface" Property="BorderBrush" Value="{StaticResource NoteFocusBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
-            <DataTrigger Binding="{Binding Topmost}" Value="True">
-                <Setter Property="Background" Value="{StaticResource NotePinnedBrush}" />
-                <Setter Property="Foreground" Value="White" />
+            <Trigger Property="IsChecked" Value="True">
                 <Setter Property="ToolTip" Value="{DynamicResource TipUnpinNote}" />
-            </DataTrigger>
+                <Setter Property="AutomationProperties.Name" Value="{DynamicResource UnpinThisNote}" />
+            </Trigger>
         </Style.Triggers>
     </Style>
 

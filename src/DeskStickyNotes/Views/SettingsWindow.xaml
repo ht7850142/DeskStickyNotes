@@ -174,7 +174,7 @@
                              AutomationProperties.Name="{DynamicResource SettingNewNoteHotkey}" />
                 </DockPanel>
                 <TextBlock Text="{DynamicResource SettingNextNoteHotkey}" Style="{StaticResource SettingsLabel}" Margin="0,0,0,6" />
-                <DockPanel>
+                <DockPanel Margin="0,0,0,12">
                     <Button DockPanel.Dock="Right" Content="{DynamicResource HotkeyClear}" Margin="8,0,0,0"
                             Style="{StaticResource SecondaryButtonStyle}" MinWidth="64" Height="36" Padding="10,0" FontSize="12"
                             Command="{Binding ClearNextNoteHotkeyCommand}" />
@@ -182,6 +182,25 @@
                              Text="{Binding NextNoteHotkey, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="{DynamicResource SettingNextNoteHotkey}" />
                 </DockPanel>
+                <TextBlock Text="{DynamicResource SettingPinNoteHotkey}" Style="{StaticResource SettingsLabel}" Margin="0,0,0,6" />
+                <DockPanel Margin="0,0,0,12">
+                    <Button DockPanel.Dock="Right" Content="{DynamicResource HotkeyClear}" Margin="8,0,0,0"
+                            Style="{StaticResource SecondaryButtonStyle}" MinWidth="64" Height="36" Padding="10,0" FontSize="12"
+                            Command="{Binding ClearPinNoteHotkeyCommand}" />
+                    <TextBox x:Name="PinNoteHotkeyBox" Style="{StaticResource HotkeyEntryStyle}"
+                             Text="{Binding PinNoteHotkey, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{DynamicResource SettingPinNoteHotkey}" />
+                </DockPanel>
+                <TextBlock Text="{DynamicResource SettingPinAllHotkey}" Style="{StaticResource SettingsLabel}" Margin="0,0,0,6" />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="{DynamicResource HotkeyClear}" Margin="8,0,0,0"
+                            Style="{StaticResource SecondaryButtonStyle}" MinWidth="64" Height="36" Padding="10,0" FontSize="12"
+                            Command="{Binding ClearPinAllHotkeyCommand}" />
+                    <TextBox x:Name="PinAllHotkeyBox" Style="{StaticResource HotkeyEntryStyle}"
+                             Text="{Binding PinAllHotkey, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{DynamicResource SettingPinAllHotkey}" />
+                </DockPanel>
+                <TextBlock Text="{DynamicResource HotkeyPinHint}" Style="{StaticResource SettingsHint}" Margin="0,8,0,0" />
                 <TextBlock Text="{DynamicResource HotkeyCycleHint}" Style="{StaticResource SettingsHint}" Margin="0,8,0,0" />
                 <Border Height="1" Background="{StaticResource SettingsDividerBrush}" Margin="0,22,0,20" />
                 <TextBlock Text="{DynamicResource SettingsDesktopTitle}" Style="{StaticResource SettingsSectionTitle}" />

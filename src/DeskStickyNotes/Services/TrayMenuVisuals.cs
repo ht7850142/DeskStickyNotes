@@ -5,7 +5,7 @@ namespace DeskStickyNotes.Services;
 
 internal static class TrayMenuVisuals
 {
-    internal enum Glyph { New, Notes, Show, Hide, Settings, Exit }
+    internal enum Glyph { New, Notes, Show, Hide, Pin, PinAll, Settings, Exit }
 
     public static Forms.ToolStripRenderer CreateRenderer() => Forms.SystemInformation.HighContrast
         ? new Forms.ToolStripSystemRenderer()
@@ -41,6 +41,18 @@ internal static class TrayMenuVisuals
             case Glyph.Hide:
                 graphics.DrawArc(pen, 2, 4, 12, 8, 15, 150); graphics.DrawArc(pen, 2, 4, 12, 8, 195, 150);
                 graphics.DrawLine(pen, 2, 14, 14, 2);
+                break;
+            case Glyph.Pin:
+            case Glyph.PinAll:
+                if (glyph == Glyph.PinAll)
+                {
+                    graphics.DrawLine(pen, 1, 4, 1, 13);
+                    graphics.DrawLine(pen, 1, 13, 5, 13);
+                    graphics.TranslateTransform(2, 0);
+                }
+                graphics.DrawLines(pen, new Drawing.Point[] { new(5, 2), new(11, 2), new(10, 4), new(10, 7),
+                    new(12, 9), new(12, 10), new(4, 10), new(4, 9), new(6, 7), new(6, 4), new(5, 2) });
+                graphics.DrawLine(pen, 8, 10, 8, 14);
                 break;
             case Glyph.Settings:
                 graphics.DrawEllipse(pen, 3, 3, 10, 10); graphics.DrawEllipse(pen, 6, 6, 4, 4);

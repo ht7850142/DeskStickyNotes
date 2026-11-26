@@ -99,16 +99,19 @@ internal static class Program
         Equal(HotkeyGesture.DefaultNewNote, canonical.ToString());
     }
 
+    private static AppSettings Shortcuts(string create, string next, string pin = "", string all = "") =>
+        new() { NewNoteHotkey = create, NextNoteHotkey = next, PinNoteHotkey = pin, PinAllHotkey = all };
+
     private static void HotkeyTransactions()
     {
         var native = new FakeHotkeyRegistrar();
         using var manager = new HotkeyRegistrationManager(native);
         var calls = new List<HotkeyAction>();
         manager.Invoked += calls.Add;
-        Assert(manager.TryApply("Ctrl+Alt+N", "Ctrl+Alt+PageDown", out _), "Initial shortcuts failed.");
+        Assert(manager.TryApply(Shortcuts("Ctrl+Alt+N", "Ctrl+Alt+PageDown"), out _), "Initial shortcuts failed.");
         var original = manager.Entries.ToArray();
         native.Blocked.Add(ParseGesture("Ctrl+Shift+X"));
-        Assert(!manager.TryApply("Ctrl+Shift+M", "Ctrl+Shift+X", out var failure), "A conflicting update was accepted.");
+        Assert(!manager.TryApply(Shortcuts("Ctrl+Shift+M", "Ctrl+Shift+X"), out var failure), "A conflicting update was accepted.");
         Equal(HotkeyFailureReason.Unavailable, failure!.Reason);
         Equal(2, native.Active.Count);
         Assert(original.SequenceEqual(manager.Entries), "A failed update changed the working shortcut set.");
@@ -116,19 +119,25 @@ internal static class Program
         manager.Dispatch(original[0].Id);
         Equal(HotkeyAction.NewNote, calls.Single());
         var registrations = native.RegisterCount;
-        Assert(manager.TryApply("Ctrl+Alt+PageDown", "Ctrl+Alt+N", out _), "Swapping shortcuts failed.");
+        Assert(manager.TryApply(Shortcuts("Ctrl+Alt+PageDown", "Ctrl+Alt+N"), out _), "Swapping shortcuts failed.");
         Equal(registrations, native.RegisterCount);
         manager.Dispatch(original[0].Id);
         Equal(HotkeyAction.NextNote, calls.Last());
-        Assert(!manager.TryApply("Ctrl+Alt+N", "control+alt+n", out failure), "Duplicate shortcuts were accepted.");
+        Assert(!manager.TryApply(Shortcuts("Ctrl+Alt+N", "control+alt+n"), out failure), "Duplicate shortcuts were accepted.");
         Equal(HotkeyFailureReason.Duplicate, failure!.Reason);
         Equal(2, native.Active.Count);
         var startupNative = new FakeHotkeyRegistrar();
         startupNative.Blocked.Add(ParseGesture("Ctrl+Alt+N"));
         using var startup = new HotkeyRegistrationManager(startupNative);
-        Assert(!startup.TryInitialize("Ctrl+Alt+N", "Ctrl+Alt+PageDown", out _), "Startup conflict was not reported.");
+        Assert(!startup.TryInitialize(Shortcuts("Ctrl+Alt+N", "Ctrl+Alt+PageDown"), out _), "Startup conflict was not reported.");
         Equal(1, startupNative.Active.Count);
         Equal(HotkeyAction.NextNote, startup.Entries.Single().Action);
+        var four = Shortcuts("Ctrl+Alt+N", "Ctrl+Alt+N", "Alt+Shift+F8", "Alt+Shift+F9");
+        Assert(!startup.TryInitialize(four, out _), "Conflicts in two older shortcuts went unreported.");
+        Assert(startup.Entries.Select(entry => entry.Action).SequenceEqual(new[] { HotkeyAction.PinNote, HotkeyAction.PinAll }),
+            "Occupied shortcuts disabled working pin shortcuts.");
+        Assert(!startup.TryApply(Shortcuts("", "Alt+Shift+F9", "", "Alt+Shift+F9"), out failure)
+            && failure?.Reason == HotkeyFailureReason.Duplicate, "A duplicate pin shortcut was accepted.");
     }
 
     private static void HotkeyCapture()
@@ -137,13 +146,13 @@ internal static class Program
         using var manager = new HotkeyRegistrationManager(native);
         var calls = 0;
         manager.Invoked += _ => calls++;
-        manager.TryApply("Ctrl+Alt+N", "Ctrl+Alt+PageDown", out _);
+        manager.TryApply(Shortcuts("Ctrl+Alt+N", "Ctrl+Alt+PageDown"), out _);
         var oldId = manager.Entries[0].Id;
         manager.Suspend(); manager.Suspend();
         Equal(0, native.Active.Count);
         manager.Dispatch(oldId);
         Equal(0, calls);
-        Assert(manager.TryApply("Ctrl+Shift+N", "", out _), "A suspended update failed.");
+        Assert(manager.TryApply(Shortcuts("Ctrl+Shift+N", ""), out _), "A suspended update failed.");
         Equal(0, native.Active.Count);
         Assert(manager.Resume(out _), "Nested suspension did not resume.");
         Equal(0, native.Active.Count);
@@ -156,7 +165,7 @@ internal static class Program
         Assert(!manager.Resume(out var failure), "A newly occupied key was silently accepted on resume.");
         Equal(HotkeyFailureReason.Unavailable, failure!.Reason);
         Equal(0, native.Active.Count);
-        Assert(manager.TryApply("", "", out _), "Disabling all shortcuts failed.");
+        Assert(manager.TryApply(Shortcuts("", ""), out _), "Disabling all shortcuts failed.");
         Equal(0, manager.Entries.Count);
     }
 
@@ -184,7 +193,7 @@ internal static class Program
     private static void PersistHotkeys() => WithTemporaryDirectory(directory =>
     {
         var storage = new NoteStorageService(directory);
-        var settings = new AppSettings { Language = "fr-FR", NewNoteHotkey = "Ctrl+Shift+N", NextNoteHotkey = "" };
+        var settings = new AppSettings { Language = "fr-FR", NewNoteHotkey = "Ctrl+Shift+N", NextNoteHotkey = "", PinNoteHotkey = "", PinAllHotkey = "Alt+Shift+F8" };
         storage.SaveSettings(settings);
         var restored = storage.LoadSettings();
         Equal("Ctrl+Shift+N", restored.NewNoteHotkey);
@@ -192,11 +201,15 @@ internal static class Program
         Equal("fr-FR", restored.Language);
         Equal(restored.NewNoteHotkey, restored.Clone().NewNoteHotkey);
         Equal(restored.NextNoteHotkey, restored.Clone().NextNoteHotkey);
+        Equal("", restored.PinNoteHotkey);
+        Equal("Alt+Shift+F8", restored.Clone().PinAllHotkey);
         File.WriteAllText(Path.Combine(directory, "settings.json"), "{\"schemaVersion\":3,\"language\":\"en-US\"}");
         restored = storage.LoadSettings();
         Equal(HotkeyGesture.DefaultNewNote, restored.NewNoteHotkey);
         Equal(HotkeyGesture.DefaultNextNote, restored.NextNoteHotkey);
-        Equal(4, restored.SchemaVersion);
+        Equal(5, restored.SchemaVersion);
+        Equal(HotkeyGesture.DefaultPinNote, restored.PinNoteHotkey);
+        Equal(HotkeyGesture.DefaultPinAll, restored.PinAllHotkey);
     });
 
     private static void RejectHotkeyDraft()
@@ -655,6 +668,15 @@ internal static class Program
                     }
                     var recorder = (TextBox)settingsWindow.FindName("NewNoteHotkeyBox");
                     Assert(recorder.IsReadOnly && recorder.Text == HotkeyGesture.DefaultNewNote, "The shortcut recorder is not populated.");
+                    var pinRecorder = (TextBox)settingsWindow.FindName("PinNoteHotkeyBox");
+                    var allRecorder = (TextBox)settingsWindow.FindName("PinAllHotkeyBox");
+                    pinRecorder.SetCurrentValue(TextBox.TextProperty, "Ctrl+Shift+P");
+                    Equal("Ctrl+Shift+P", settings.PinNoteHotkey);
+                    Equal(HotkeyGesture.DefaultPinAll, allRecorder.Text);
+                    settings.ClearPinAllHotkeyCommand.Execute(null);
+                    Equal("", allRecorder.Text);
+                    settings.ResetHotkeysCommand.Execute(null);
+                    Equal(HotkeyGesture.DefaultPinNote, pinRecorder.Text);
                 }
                 finally { settingsWindow.Close(); }
             }
@@ -667,24 +689,23 @@ internal static class Program
 
     private static void VerifyNativeHotkeys()
     {
-        var created = 0;
-        var switched = 0;
-        using var service = new GlobalHotkeyService(() => created++, () => switched++);
-        using var competitor = new GlobalHotkeyService(() => { }, () => { });
-        Assert(service.TryApply("Ctrl+Alt+Shift+F7", "Ctrl+Alt+Shift+F8", out var error), $"Native registration failed: {error}");
-        Assert(competitor.TryApply("Ctrl+Alt+Shift+F9", "", out _), "Cannot reserve the native conflict fixture.");
+        var invoked = new List<HotkeyAction>();
+        using var service = new GlobalHotkeyService(invoked.Add);
+        using var competitor = new GlobalHotkeyService(_ => { });
+        Assert(service.TryApply(Shortcuts("Ctrl+Alt+Shift+F7", "Ctrl+Alt+Shift+F8", "Ctrl+Alt+Shift+F10", "Ctrl+Alt+Shift+F11"), out var error), $"Native registration failed: {error}");
+        Assert(competitor.TryApply(Shortcuts("Ctrl+Alt+Shift+F9", ""), out _), "Cannot reserve the native conflict fixture.");
         var original = service.Registrations.ToArray();
-        Assert(!service.TryApply("Ctrl+Alt+Shift+F6", "Ctrl+Alt+Shift+F9", out error), "Windows allowed two owners of the same shortcut.");
+        Assert(!service.TryApply(Shortcuts("Ctrl+Alt+Shift+F6", "Ctrl+Alt+Shift+F9"), out error), "Windows allowed two owners of the same shortcut.");
         Equal(HotkeyFailureReason.Unavailable, error!.Reason);
         Assert(original.SequenceEqual(service.Registrations), "Native conflict replaced the working bindings.");
         foreach (var registration in original) SendMessage(service.Handle, 0x0312, new IntPtr(registration.Id), IntPtr.Zero);
-        Equal(1, created); Equal(1, switched);
+        Assert(invoked.SequenceEqual(Enum.GetValues<HotkeyAction>()), "Native shortcut dispatched the wrong action.");
         service.Suspend();
         foreach (var registration in original) SendMessage(service.Handle, 0x0312, new IntPtr(registration.Id), IntPtr.Zero);
-        Equal(1, created); Equal(1, switched);
+        Assert(invoked.SequenceEqual(Enum.GetValues<HotkeyAction>()), "Native shortcut dispatched the wrong action.");
         Assert(service.Resume(out _), "Native shortcuts could not resume after capture.");
-        Assert(service.TryApply("", "", out _), "Native shortcuts could not be disabled.");
-        Assert(competitor.TryApply("Ctrl+Alt+Shift+F7", "Ctrl+Alt+Shift+F8", out _), "Native reservations leaked after disabling.");
+        Assert(service.TryApply(Shortcuts("", ""), out _), "Native shortcuts could not be disabled.");
+        Assert(competitor.TryApply(Shortcuts("Ctrl+Alt+Shift+F7", "Ctrl+Alt+Shift+F8"), out _), "Native reservations leaked after disabling.");
     }
 
     private static void VerifyShortcutNavigation(RegressionApp app)
@@ -713,7 +734,69 @@ internal static class Program
             InvokeApp("CycleNotes");
             InvokeApp("CycleNotes");
             Equal(WindowState.Normal, windows[first.Id].WindowState);
-            Equal(2, new NoteStorageService(app.DataDirectory).LoadNotes().Count);
+            var store = new NoteStorageService(app.DataDirectory);
+            var current = windows[first.Id];
+            var editor = (RichTextBox)current.FindName("Editor");
+            var header = (Border)current.FindName("NoteHeader");
+            var icon = (Border)current.FindName("CollapsedIconContent");
+            var toggle = (ToggleButton)current.FindName("PinToggle");
+            MenuItem OpenAction(FrameworkElement target, string label)
+            {
+                var menu = target.ContextMenu!;
+                menu.PlacementTarget = target;
+                menu.IsOpen = true;
+                var item = menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, LocalizationService.Get(label)));
+                menu.IsOpen = false;
+                return item;
+            }
+            void Click(MenuItem item) => item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Click(OpenAction(header, "PinThisNote"));
+            Assert(first.Topmost && current.Topmost && toggle.IsChecked == true, "Header pin did not reach the window and button.");
+            var unpin = OpenAction(editor, "UnpinThisNote");
+            Equal(HotkeyGesture.DefaultPinNote, unpin.InputGestureText);
+            Click(unpin);
+            Assert(!first.Topmost && !current.Topmost, "Editor menu could not unpin.");
+            Assert(editor.ContextMenu.Items.OfType<MenuItem>().Any(i => i.Command == ApplicationCommands.Paste && i.CommandTarget == editor),
+                "Adding pin actions removed editor paste.");
+            Invoke(current, "CollapseToIcon");
+            Click(OpenAction(icon, "PinThisNote"));
+            Click(OpenAction(icon, "UnpinThisNote"));
+            Assert(current.IsCollapsedToIcon && current.Topmost && !first.Topmost, "Editing the saved pin stopped the collapsed icon floating.");
+            InvokeApp("SetNoteVisibility", second.Id, false);
+            InvokeApp("HandleGlobalHotkey", HotkeyAction.PinAll);
+            Assert(first.Topmost && second.Topmost && !second.Visible && current.IsCollapsedToIcon, "Bulk pin changed visibility or expansion.");
+            Click(OpenAction(icon, "UnpinAllNotes"));
+            Assert(!first.Topmost && !second.Topmost && current.Topmost, "Bulk unpin changed the compact icon layer.");
+            InvokeApp("SetNotePinned", second.Id, true);
+            Assert(second.Visible && second.Topmost && windows[second.Id].Topmost, "Tray pin did not recall the named note.");
+            InvokeApp("SetNoteVisibility", second.Id, false);
+            InvokeApp("ShowNoteWindow", first, true);
+            InvokeApp("HandleGlobalHotkey", HotkeyAction.PinNote);
+            Assert(first.Topmost && !current.IsCollapsedToIcon && editor.IsKeyboardFocusWithin, "Pin shortcut did not expand and focus the editor.");
+            InvokeApp("HandleGlobalHotkey", HotkeyAction.PinNote);
+            Assert(!first.Topmost && !current.Topmost, "Repeating the shortcut while editing did not unpin.");
+            current.MinimizeToTaskbar();
+            InvokeApp("HandleGlobalHotkey", HotkeyAction.PinNote);
+            Assert(first.Topmost && current.WindowState == WindowState.Normal && editor.IsKeyboardFocusWithin, "The minimized note was not ready to type.");
+            var other = new Window { Width = 120, Height = 80, ShowInTaskbar = false };
+            try
+            {
+                other.Show();
+                other.Activate();
+                Assert(!current.IsActive, "The foreground fixture did not take focus.");
+                InvokeApp("HandleGlobalHotkey", HotkeyAction.PinNote);
+                Assert(first.Topmost && current.IsActive && editor.IsKeyboardFocusWithin, "Recall from another window unpinned the note or lost focus.");
+            }
+            finally { other.Close(); }
+            var saved = store.LoadNotes();
+            Equal(2, saved.Count);
+            Assert(saved.All(note => note.Topmost) && !saved.Single(note => note.Id == second.Id).Visible, "Saved pin/visibility differs from the session.");
+            InvokeApp("SetNoteVisibility", second.Id, true);
+            InvokeApp("ShowNoteWindow", first, true);
+            InvokeApp("HandleGlobalHotkey", HotkeyAction.PinAll);
+            InvokeApp("HandleGlobalHotkey", HotkeyAction.PinAll);
+            Assert(IsAbove(new WindowInteropHelper(current).Handle, new WindowInteropHelper(windows[second.Id]).Handle),
+                "Batch pinning covered the most recently edited note.");
         }
         finally
         {
@@ -1035,8 +1118,8 @@ internal static class Program
                 }
                 window.CloseForApplication();
             }
-            var notes = new[] { new TrayNote(Guid.NewGuid(), chinese ? "今天，慢慢完成" : "A little focus for today", true), new TrayNote(Guid.NewGuid(), chinese ? "一闪而过的灵感" : "A passing thought", false) };
-            using var tray = new TrayService(() => { }, () => { }, () => { }, () => { }, () => { }, () => notes, (_, _) => { });
+            var notes = new[] { new TrayNote(Guid.NewGuid(), chinese ? "今天，慢慢完成" : "A little focus for today", true, false), new TrayNote(Guid.NewGuid(), chinese ? "一闪而过的灵感" : "A passing thought", false, false) };
+            using var tray = new TrayService(() => { }, () => { }, () => { }, () => { }, () => { }, () => notes, (_, _) => { }, (_, _) => { }, _ => { }, () => new AppSettings());
             using var menu = tray.CreateContextMenu();
             menu.CreateControl();
             menu.PerformLayout();
@@ -1114,8 +1197,8 @@ internal static class Program
             window.Close();
         }
         LocalizationService.ApplyLanguage("zh-Hans");
-        var sampleNotes = new[] { new TrayNote(Guid.NewGuid(), "工作计划", true), new TrayNote(Guid.NewGuid(), "灵感与提醒", false) };
-        using var tray = new TrayService(() => { }, () => { }, () => { }, () => { }, () => { }, () => sampleNotes, (_, _) => { });
+        var sampleNotes = new[] { new TrayNote(Guid.NewGuid(), "工作计划", true, false), new TrayNote(Guid.NewGuid(), "灵感与提醒", false, false) };
+        using var tray = new TrayService(() => { }, () => { }, () => { }, () => { }, () => { }, () => sampleNotes, (_, _) => { }, (_, _) => { }, _ => { }, () => new AppSettings());
         using var menu = tray.CreateContextMenu();
         menu.CreateControl();
         menu.PerformLayout();
@@ -1142,7 +1225,8 @@ internal static class Program
         void Screenshot(DrawingContext context, string file, Rect bounds)
         {
             var bitmap = new BitmapImage(new Uri(Path.GetFullPath(Path.Combine(outputDirectory, file))));
-            context.DrawImage(bitmap, bounds);
+            var scale = Math.Min(bounds.Width / bitmap.PixelWidth, bounds.Height / bitmap.PixelHeight);
+            context.DrawImage(bitmap, new Rect(bounds.X, bounds.Y, bitmap.PixelWidth * scale, bitmap.PixelHeight * scale));
         }
         using (var context = visual.RenderOpen())
         {
@@ -1153,7 +1237,7 @@ internal static class Program
             Label(context, "托盘菜单", 956, 74);
             Screenshot(context, "note-540.png", new Rect(20, 104, 408, 302));
             Screenshot(context, "settings-zh-Hans.png", new Rect(444, 104, 480, 608));
-            Screenshot(context, "tray-menu.png", new Rect(952, 104, 244, 330));
+            Screenshot(context, "tray-menu.png", new Rect(942, 104, 272, 445));
             Label(context, "托盘图标 · 浅色与深色背景", 28, 460);
             context.DrawRoundedRectangle(System.Windows.Media.Brushes.White, null, new Rect(28, 500, 386, 62), 8, 8);
             context.DrawRoundedRectangle(new SolidColorBrush(System.Windows.Media.Color.FromRgb(37, 43, 42)), null, new Rect(28, 572, 386, 62), 8, 8);
@@ -1295,16 +1379,31 @@ internal static class Program
     {
         var firstId = Guid.NewGuid();
         var secondId = Guid.NewGuid();
-        var notes = new List<TrayNote> { new(firstId, "工作 & 计划", true), new(secondId, "生活提醒", false) };
+        var notes = new List<TrayNote> { new(firstId, "工作 & 计划", true, false), new(secondId, "生活提醒", false, true) };
         var requests = new List<(Guid Id, bool Visible)>();
+        var pins = new List<(Guid Id, bool Pin)>();
+        var all = new List<bool>();
         using var tray = new TrayService(() => { }, () => { }, () => { }, () => { }, () => { },
-            () => notes, (id, visible) => requests.Add((id, visible)));
+            () => notes, (id, visible) => requests.Add((id, visible)),
+            (id, pin) => pins.Add((id, pin)), all.Add, () => new AppSettings());
         using var menu = tray.CreateContextMenu();
-        var list = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.DropDownItems.Count > 0);
+        var list = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text!.StartsWith(LocalizationService.Get("TrayNoteList")));
         var first = (Forms.ToolStripMenuItem)list.DropDownItems[0];
         var second = (Forms.ToolStripMenuItem)list.DropDownItems[1];
         Assert(first.Checked && !second.Checked, "The tray does not distinguish visible and hidden notes.");
         Equal("工作 && 计划", first.Text);
+        var pinList = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == LocalizationService.Get("TrayPinList"));
+        var pinAll = menu.Items.OfType<Forms.ToolStripMenuItem>().Single(item => item.Text == LocalizationService.Get("PinAllNotes"));
+        var pinItems = pinList.DropDownItems.OfType<Forms.ToolStripMenuItem>().ToArray();
+        Assert(!pinItems[0].Checked && pinItems[1].Checked, "Pin checkmarks followed visibility.");
+        pinItems[0].PerformClick();
+        pinItems[1].PerformClick();
+        Equal((firstId, true), pins[0]);
+        Equal((secondId, false), pins[1]);
+        Equal(HotkeyGesture.DefaultPinAll, pinAll.ShortcutKeyDisplayString);
+        pinAll.PerformClick();
+        Assert(all.Single(), "Mixed pins must offer pin all.");
+        notes[0] = notes[0] with { Pinned = true };
         first.PerformClick();
         second.PerformClick();
         Equal((firstId, false), requests[0]);
@@ -1313,10 +1412,14 @@ internal static class Program
         tray.RefreshNoteList();
         first = (Forms.ToolStripMenuItem)list.DropDownItems[0];
         Equal("改名后", first.Text);
+        Equal(LocalizationService.Get("UnpinAllNotes"), pinAll.Text);
+        pinAll.PerformClick();
+        Assert(!all.Last(), "When all notes are pinned the bulk action must unpin.");
         Assert(!first.Checked, "Tray visibility did not refresh.");
         notes.Clear();
         tray.RefreshNoteList();
         Equal(1, list.DropDownItems.Count);
+        Assert(!pinAll.Enabled && !pinList.Enabled, "Pin actions must be disabled without notes.");
         Assert(!list.DropDownItems[0].Enabled, "An empty note list should not contain an actionable item.");
         WithTemporaryStorage(storage =>
         {

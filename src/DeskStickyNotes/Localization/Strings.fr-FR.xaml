@@ -149,6 +149,19 @@
     <sys:String x:Key="HotkeyReset">Réinitialiser</sys:String>
     <sys:String x:Key="HotkeyNotSet">Non défini — appuyez sur un raccourci</sys:String>
     <sys:String x:Key="HotkeyInvalid">Combinez Ctrl, Alt ou Win avec une autre touche.</sys:String>
-    <sys:String x:Key="HotkeyDuplicate">Choisissez des raccourcis différents pour créer une note et passer à la suivante.</sys:String>
+    <sys:String x:Key="TrayPinList">Épingler une note par nom</sys:String>
+    <sys:String x:Key="PinThisNote">Épingler cette note</sys:String>
+    <sys:String x:Key="UnpinThisNote">Détacher cette note</sys:String>
+    <sys:String x:Key="PinAllNotes">Épingler toutes les notes</sys:String>
+    <sys:String x:Key="UnpinAllNotes">Détacher toutes les notes</sys:String>
+    <sys:String x:Key="PinnedLabel">Épinglée</sys:String>
+    <sys:String x:Key="SettingPinNoteHotkey">Épingler ou rappeler une note</sys:String>
+    <sys:String x:Key="SettingPinAllHotkey">Épingler ou détacher toutes les notes</sys:String>
+    <sys:String x:Key="HotkeyPinHint">Depuis une autre application, ce raccourci ouvre la dernière note pour la modifier. Appuyez à nouveau dans la note pour la détacher.</sys:String>
+    <sys:String x:Key="EditCut">Couper</sys:String>
+    <sys:String x:Key="EditCopy">Copier</sys:String>
+    <sys:String x:Key="EditPaste">Coller</sys:String>
+    <sys:String x:Key="EditSelectAll">Tout sélectionner</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">Choisissez un raccourci différent pour chaque action.</sys:String>
     <sys:String x:Key="HotkeyUnavailable">{0} est indisponible ou utilisé par une autre application. Choisissez une autre combinaison dans les paramètres.</sys:String>
 </ResourceDictionary>

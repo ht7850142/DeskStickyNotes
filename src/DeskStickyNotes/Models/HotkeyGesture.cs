@@ -7,6 +7,9 @@ public readonly record struct HotkeyGesture(ModifierKeys Modifiers, Key Key)
     public const string DefaultNewNote = "Ctrl+Alt+N";
     public const string DefaultNextNote = "Ctrl+Alt+PageDown";
 
+    public const string DefaultPinNote = "Ctrl+Alt+P";
+    public const string DefaultPinAll = "Ctrl+Alt+Shift+P";
+
     public static bool TryCreate(ModifierKeys modifiers, Key key, out HotkeyGesture gesture)
     {
         gesture = default;

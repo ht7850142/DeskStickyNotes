@@ -149,6 +149,19 @@
     <sys:String x:Key="HotkeyReset">既定に戻す</sys:String>
     <sys:String x:Key="HotkeyNotSet">未設定 — ショートカットを入力</sys:String>
     <sys:String x:Key="HotkeyInvalid">Ctrl、Alt、Win のいずれかと別のキーを組み合わせてください。</sys:String>
-    <sys:String x:Key="HotkeyDuplicate">作成と切り替えには別のショートカットを設定してください。</sys:String>
+    <sys:String x:Key="TrayPinList">名前でノートを固定</sys:String>
+    <sys:String x:Key="PinThisNote">このノートを最前面に固定</sys:String>
+    <sys:String x:Key="UnpinThisNote">このノートの固定を解除</sys:String>
+    <sys:String x:Key="PinAllNotes">すべてのノートを最前面に固定</sys:String>
+    <sys:String x:Key="UnpinAllNotes">すべてのノートの固定を解除</sys:String>
+    <sys:String x:Key="PinnedLabel">固定中</sys:String>
+    <sys:String x:Key="SettingPinNoteHotkey">ノートを固定・呼び出し</sys:String>
+    <sys:String x:Key="SettingPinAllHotkey">すべてのノートの固定を切り替え</sys:String>
+    <sys:String x:Key="HotkeyPinHint">ほかのアプリから固定のショートカットを押すと、直前のノートを開いてすぐに入力できます。編集中にもう一度押すと固定を解除します。</sys:String>
+    <sys:String x:Key="EditCut">切り取り</sys:String>
+    <sys:String x:Key="EditCopy">コピー</sys:String>
+    <sys:String x:Key="EditPaste">貼り付け</sys:String>
+    <sys:String x:Key="EditSelectAll">すべて選択</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">操作ごとに異なるショートカットを設定してください。</sys:String>
     <sys:String x:Key="HotkeyUnavailable">{0} は使用できないか、ほかのアプリで使用されています。設定で別の組み合わせを選んでください。</sys:String>
 </ResourceDictionary>

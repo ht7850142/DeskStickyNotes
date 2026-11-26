@@ -99,7 +99,7 @@ The view models expose note and settings state. Views handle WPF-specific UI beh
 
 - receive `WM_HOTKEY` through a message-only WPF HWND, using `RegisterHotKey` with `MOD_NOREPEAT`
 - reserve replacement combinations before releasing existing bindings; duplicates and native conflicts leave the working configuration intact
-- reuse existing registration IDs when swapping the two actions, and support independent disabling through empty settings values
+- reuse existing registration IDs when swapping actions, and support independent disabling through empty settings values
 - suspend registrations while shortcut fields record input, then resume when focus leaves the field
 - create notes or cycle through saved notes in creation order, restoring hidden, minimized, and collapsed targets
 - temporarily reveal an unpinned target above a pinned peer until deactivation without changing its saved pin preference
@@ -164,8 +164,9 @@ Settings include:
 - auto-save interval
 - new-note global shortcut (default `Ctrl+Alt+N`)
 - next-note global shortcut (default `Ctrl+Alt+PageDown`)
+- recall or toggle the current note’s pin (default `Ctrl+Alt+P`) and toggle all pins (default `Ctrl+Alt+Shift+P`)
 
-Settings schema 4 adds the shortcut fields. Missing or null values receive defaults; explicit empty values remain disabled. Loading preserves existing note content and earlier settings migrations.
+Settings schema 4 adds the create and cycle shortcuts. Schema 5 adds per-note and bulk pin shortcuts. Missing or null values receive defaults; explicit empty values remain disabled. Loading preserves existing note content and earlier settings migrations.
 
 ## Windows Shell Behavior
 
@@ -184,7 +185,7 @@ Shared scrollbar templates keep WPF's `ScrollBar`, `Track`, page commands, and p
 
 Settings edit a view-model draft until Save. Color selection updates a sample note, and the font-size slider updates the sample text. The body scrolls independently of the Save/Cancel footer, and the window fits the current work area. Color and default pinning affect new notes; font size retains the existing application-wide behavior. Escape cancels.
 
-Shortcut fields record combinations directly, provide clear/reset controls, and retain Tab navigation. Save validates and registers the complete pair before committing the draft. A localized error stays above the fixed footer when a combination is invalid, duplicated, or occupied; the settings window remains open for correction. All seven locales have key/placeholder contract checks and compiled WPF layout coverage.
+Shortcut fields record combinations directly, provide clear/reset controls, and retain Tab navigation. Save validates and registers all configured shortcuts before committing the draft. A localized error stays above the fixed footer when a combination is invalid, duplicated, or occupied; the settings window remains open for correction. All seven locales have key/placeholder contract checks and compiled WPF layout coverage.
 
 `Assets/Icons.xaml` is the editable WPF vector master for the application mark and a simplified small tray mark. `scripts/build-icons.ps1` exports the PNG and multi-resolution ICO files without external rendering packages. Tray frames cover 16–64 pixels; the application icon additionally covers 128 and 256 pixels. The collapsed reminder and settings header use the vector directly.
 

@@ -1,6 +1,12 @@
 # DeskStickyNotes 发布渠道与文案
 
-适用版本：**0.6.0**。渠道资料核对日期：**2026-11-06**。
+## 现有发布入口
+
+安装包和校验清单发布在 [GitHub Releases](https://github.com/ht7850142/DeskStickyNotes/releases/latest)。发布新版时，同步更新 [itch.io 的 Windows 绿色版](https://ht7850142.itch.io/deskstickynotes) 和 [hgtoo.com 的中文下载页](https://hgtoo.com/deskstickynotes/)。[AlternativeTo 条目](https://alternativeto.net/software/deskstickynotes/about/) 指向官网和源码。WinGet 的收录状态以 [微软社区仓库的提交记录](https://github.com/microsoft/winget-pkgs/pull/471940) 为准。
+
+## 0.6.0 渠道调研记录
+
+以下内容记录 2026-11-06 准备 0.6.0 发布时的情况。
 
 建议先做 **小众软件发现频道 → V2EX 分享创造 → WinGet → Product Hunt**。前两者收集真实 Windows 用户反馈，WinGet 改善长期分发，Product Hunt 使用英文材料集中介绍产品。先后顺序是针对本项目的判断，不代表平台承诺曝光或收录。V2EX 本轮访问遇到安全验证，发帖前需人工复核节点与版规。
 

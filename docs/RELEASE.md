@@ -85,7 +85,7 @@ Manually verify:
 - settings window opens
 - language switching works
 - all seven UI languages fit the settings window and action footer
-- default global shortcuts create and cycle notes, including hidden, minimized, and collapsed notes
+- global shortcuts create and cycle notes, recall the last note pinned with editor focus, and pin/unpin all notes while preserving hidden or minimized states
 - shortcut recording, clearing/disabling, reset, and duplicate/occupied-combination errors work
 - overlapping pinned notes remain stable on the desktop and after Win+D
 - startup toggle writes/removes the Run registry value
@@ -97,7 +97,7 @@ Manually verify:
 - compact toolbar wraps without losing editing tools
 - moving between monitors and changing DPI or resolution keeps notes reachable
 - note names save independently, update captions/icon tooltips, and survive restarts
-- tray note list refreshes names and permits independent Show/Hide actions, with hidden state saved across restarts
+- tray menus refresh names, show independent visibility and pin states, and dispatch both single-note and bulk actions; saved state survives restarts
 - imported text slices still preview after their source files are deleted
 
 ## 6. Publish

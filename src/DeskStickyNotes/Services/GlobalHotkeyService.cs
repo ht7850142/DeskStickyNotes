@@ -12,7 +12,7 @@ internal sealed class GlobalHotkeyService : IDisposable, IHotkeyRegistrar
     internal IntPtr Handle => _source.Handle;
     internal IReadOnlyList<HotkeyRegistration> Registrations => _manager.Entries;
 
-    public GlobalHotkeyService(Action createNote, Action nextNote)
+    public GlobalHotkeyService(Action<HotkeyAction> invoke)
     {
         _source = new HwndSource(new HwndSourceParameters("DeskStickyNotes.GlobalHotkeys")
         {
@@ -20,12 +20,12 @@ internal sealed class GlobalHotkeyService : IDisposable, IHotkeyRegistrar
             WindowStyle = 0
         });
         _manager = new HotkeyRegistrationManager(this);
-        _manager.Invoked += action => { if (action == HotkeyAction.NewNote) createNote(); else nextNote(); };
+        _manager.Invoked += invoke;
         _source.AddHook(WndProc);
     }
 
-    public bool TryApply(string? newNote, string? nextNote, out HotkeyFailure? failure) => _manager.TryApply(newNote, nextNote, out failure);
-    public bool TryInitialize(string? newNote, string? nextNote, out HotkeyFailure? failure) => _manager.TryInitialize(newNote, nextNote, out failure);
+    public bool TryApply(AppSettings settings, out HotkeyFailure? failure) => _manager.TryApply(settings, out failure);
+    public bool TryInitialize(AppSettings settings, out HotkeyFailure? failure) => _manager.TryInitialize(settings, out failure);
     public void Suspend() => _manager.Suspend();
     public bool Resume(out HotkeyFailure? failure) => _manager.Resume(out failure);
 

@@ -56,7 +56,9 @@ public sealed class NoteStorageService
         settings.AutoSaveIntervalSeconds = Math.Clamp(settings.AutoSaveIntervalSeconds, 1, 60);
         settings.NewNoteHotkey ??= HotkeyGesture.DefaultNewNote;
         settings.NextNoteHotkey ??= HotkeyGesture.DefaultNextNote;
-        settings.SchemaVersion = Math.Max(4, settings.SchemaVersion);
+        settings.PinNoteHotkey ??= HotkeyGesture.DefaultPinNote;
+        settings.PinAllHotkey ??= HotkeyGesture.DefaultPinAll;
+        settings.SchemaVersion = Math.Max(5, settings.SchemaVersion);
         return settings;
     }
 

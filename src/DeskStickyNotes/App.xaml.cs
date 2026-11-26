@@ -60,11 +60,14 @@ public partial class App : System.Windows.Application
             () => Dispatcher.Invoke(ShowSettingsWindow),
             () => Dispatcher.Invoke(ExitApplication),
             () => Dispatcher.Invoke(GetTrayNotes),
-            (id, visible) => Dispatcher.Invoke(() => SetNoteVisibility(id, visible)));
+            (id, visible) => Dispatcher.Invoke(() => SetNoteVisibility(id, visible)),
+            (id, pinned) => Dispatcher.Invoke(() => SetNotePinned(id, pinned)),
+            pinned => Dispatcher.Invoke(() => SetAllNotesPinned(pinned)),
+            () => _settings);
         _trayService.Show();
 
-        _hotkeys = new GlobalHotkeyService(CreateNoteFromHotkey, CycleNotes);
-        if (!_hotkeys.TryInitialize(_settings.NewNoteHotkey, _settings.NextNoteHotkey, out var failure))
+        _hotkeys = new GlobalHotkeyService(HandleGlobalHotkey);
+        if (!_hotkeys.TryInitialize(_settings, out var failure))
             _trayService.ShowHotkeyWarning(failure!.ToUserMessage());
 
         StartAutoSaveTimer();
@@ -112,8 +115,6 @@ public partial class App : System.Windows.Application
         _settings.DefaultColor = NotePalette.Normalize(_settings.DefaultColor);
         _settings.DefaultFontSize = Math.Clamp(_settings.DefaultFontSize, 10, 28);
         _settings.AutoSaveIntervalSeconds = Math.Clamp(_settings.AutoSaveIntervalSeconds, 1, 60);
-        _settings.NewNoteHotkey ??= HotkeyGesture.DefaultNewNote;
-        _settings.NextNoteHotkey ??= HotkeyGesture.DefaultNextNote;
 
         foreach (var noteModel in _storageService.LoadNotes())
         {
@@ -165,6 +166,63 @@ public partial class App : System.Windows.Application
 
     private bool CanUseGlobalHotkey() => !IsExitRequested && _noteWindows.Values.All(window => window.IsEnabled);
 
+    private void HandleGlobalHotkey(HotkeyAction action)
+    {
+        if (!CanUseGlobalHotkey()) return;
+        switch (action)
+        {
+            case HotkeyAction.NewNote: CreateNoteFromHotkey(); break;
+            case HotkeyAction.NextNote: CycleNotes(); break;
+            case HotkeyAction.PinNote: PinCurrentNote(); break;
+            case HotkeyAction.PinAll: SetAllNotesPinned(!AllNotesPinned); break;
+        }
+    }
+
+    internal string PinNoteShortcut => _settings.PinNoteHotkey;
+    internal string PinAllShortcut => _settings.PinAllHotkey;
+    internal bool AllNotesPinned => _notes.Count > 0 && _notes.All(note => note.Topmost);
+
+    private void PinCurrentNote()
+    {
+        var note = _notes.FirstOrDefault(item => item.Id == _lastActivatedNoteId)
+            ?? _notes.FirstOrDefault(item => item.Visible) ?? _notes.FirstOrDefault();
+        if (note is null)
+        {
+            CreateNote();
+            note = _notes[^1];
+            SetNotePinned(note.Id, true);
+            return;
+        }
+
+        // From another app, recall the last note ready to type, even if it was already pinned.
+        var editing = _noteWindows.TryGetValue(note.Id, out var window) && window.IsActive
+            && window.IsVisible && window.WindowState != WindowState.Minimized && !window.IsCollapsedToIcon;
+        SetNotePinned(note.Id, !editing || !note.Topmost);
+    }
+
+    private void SetNotePinned(Guid id, bool pinned)
+    {
+        var note = _notes.FirstOrDefault(item => item.Id == id);
+        if (note is null) return;
+        note.Topmost = pinned;
+        if (pinned)
+        {
+            ShowNoteWindow(note, activate: true);
+            _noteWindows[id].RevealForShortcut(abovePinnedPeer: false);
+        }
+        SaveAll();
+    }
+
+    internal void SetAllNotesPinned(bool pinned)
+    {
+        var last = _lastActivatedNoteId;
+        foreach (var note in _notes) note.Topmost = pinned;
+        if (pinned && last is Guid id && _noteWindows.TryGetValue(id, out var window)
+            && window.IsVisible && window.WindowState != WindowState.Minimized)
+            window.RaiseWithoutActivation();
+        SaveAll();
+    }
+
     private void CreateNoteFromHotkey()
     {
         if (!CanUseGlobalHotkey()) return;
@@ -214,7 +272,7 @@ public partial class App : System.Windows.Application
     {
         return _notes.Select(note => new TrayNote(note.Id, note.Title,
             note.Visible && _noteWindows.TryGetValue(note.Id, out var window)
-                && window.IsVisible && window.WindowState != WindowState.Minimized)).ToList();
+                && window.IsVisible && window.WindowState != WindowState.Minimized, note.Topmost)).ToList();
     }
 
     private void SetNoteVisibility(Guid id, bool visible)
@@ -331,7 +389,7 @@ public partial class App : System.Windows.Application
         }
 
         var viewModel = new SettingsViewModel(_settings.Clone(), ApplySettings, settings =>
-            _hotkeys is null || _hotkeys.TryApply(settings.NewNoteHotkey, settings.NextNoteHotkey, out var failure)
+            _hotkeys is null || _hotkeys.TryApply(settings, out var failure)
                 ? null : failure!.ToUserMessage());
         _settingsWindow = new SettingsWindow(viewModel, SetHotkeyCapture);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;

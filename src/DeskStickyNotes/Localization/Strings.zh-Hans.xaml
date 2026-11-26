@@ -155,6 +155,19 @@
     <sys:String x:Key="HotkeyReset">恢复默认</sys:String>
     <sys:String x:Key="HotkeyNotSet">未设置，请按快捷键</sys:String>
     <sys:String x:Key="HotkeyInvalid">请使用 Ctrl、Alt 或 Win 搭配其他按键。</sys:String>
-    <sys:String x:Key="HotkeyDuplicate">新建与切换便签不能使用相同的快捷键。</sys:String>
+    <sys:String x:Key="TrayPinList">按名称置顶便签</sys:String>
+    <sys:String x:Key="PinThisNote">置顶这张便签</sys:String>
+    <sys:String x:Key="UnpinThisNote">取消这张便签置顶</sys:String>
+    <sys:String x:Key="PinAllNotes">置顶全部便签</sys:String>
+    <sys:String x:Key="UnpinAllNotes">取消全部置顶</sys:String>
+    <sys:String x:Key="PinnedLabel">已置顶</sys:String>
+    <sys:String x:Key="SettingPinNoteHotkey">置顶或唤回当前便签</sys:String>
+    <sys:String x:Key="SettingPinAllHotkey">切换全部便签置顶</sys:String>
+    <sys:String x:Key="HotkeyPinHint">在其他应用中按置顶快捷键，即可回到上次编辑的便签并直接输入。在便签中再按一次可取消置顶。</sys:String>
+    <sys:String x:Key="EditCut">剪切</sys:String>
+    <sys:String x:Key="EditCopy">复制</sys:String>
+    <sys:String x:Key="EditPaste">粘贴</sys:String>
+    <sys:String x:Key="EditSelectAll">全选</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">请为每个操作设置不同的快捷键。</sys:String>
     <sys:String x:Key="HotkeyUnavailable">{0} 无法使用或已被其他应用占用，请在设置中选择其他组合键。</sys:String>
 </ResourceDictionary>

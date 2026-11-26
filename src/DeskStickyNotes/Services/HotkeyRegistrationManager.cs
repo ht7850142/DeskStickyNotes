@@ -2,7 +2,7 @@ using DeskStickyNotes.Models;
 
 namespace DeskStickyNotes.Services;
 
-internal enum HotkeyAction { NewNote, NextNote }
+internal enum HotkeyAction { NewNote, NextNote, PinNote, PinAll }
 internal enum HotkeyFailureReason { Invalid, Duplicate, Unavailable }
 internal sealed record HotkeyFailure(HotkeyFailureReason Reason, string Shortcut)
 {
@@ -32,23 +32,36 @@ internal sealed class HotkeyRegistrationManager(IHotkeyRegistrar registrar) : ID
     public IReadOnlyList<HotkeyRegistration> Entries => _entries.AsReadOnly();
     public event Action<HotkeyAction>? Invoked;
 
-    public bool TryInitialize(string? newNote, string? nextNote, out HotkeyFailure? failure)
+    private static (HotkeyAction Action, string? Shortcut)[] Bindings(AppSettings settings) =>
+    [
+        (HotkeyAction.NewNote, settings.NewNoteHotkey),
+        (HotkeyAction.NextNote, settings.NextNoteHotkey),
+        (HotkeyAction.PinNote, settings.PinNoteHotkey),
+        (HotkeyAction.PinAll, settings.PinAllHotkey)
+    ];
+
+    public bool TryInitialize(AppSettings settings, out HotkeyFailure? failure)
     {
-        if (TryApply(newNote, nextNote, out failure)) return true;
-        var firstFailure = failure;
-        // At startup there is no older working pair. Keep whichever action can
-        // be registered instead of disabling both when only one is occupied.
-        var hasNew = TryApply(newNote, "", out _);
-        TryApply(hasNew ? newNote : "", nextNote, out _);
-        failure = firstFailure;
-        return false;
+        // A single occupied or invalid shortcut must not disable the other actions at startup.
+        var available = new List<(HotkeyAction Action, string? Shortcut)>();
+        failure = null;
+        foreach (var binding in Bindings(settings))
+        {
+            available.Add(binding);
+            if (TryApply(available, out var error)) continue;
+            available.RemoveAt(available.Count - 1);
+            failure ??= error;
+        }
+        return failure is null;
     }
 
-    public bool TryApply(string? newNote, string? nextNote, out HotkeyFailure? failure)
+    public bool TryApply(AppSettings settings, out HotkeyFailure? failure) => TryApply(Bindings(settings), out failure);
+
+    private bool TryApply(IEnumerable<(HotkeyAction Action, string? Shortcut)> bindings, out HotkeyFailure? failure)
     {
         failure = null;
         var desired = new List<(HotkeyAction Action, HotkeyGesture Gesture)>();
-        foreach (var (action, text) in new[] { (HotkeyAction.NewNote, newNote), (HotkeyAction.NextNote, nextNote) })
+        foreach (var (action, text) in bindings)
         {
             if (string.IsNullOrWhiteSpace(text)) continue; // An empty field disables that action.
             if (!HotkeyGesture.TryParse(text, out var gesture))
@@ -101,8 +114,12 @@ internal sealed class HotkeyRegistrationManager(IHotkeyRegistrar registrar) : ID
     {
         failure = null;
         if (_suspensions == 0 || --_suspensions > 0) return true;
-        return TryApply(_entries.Find(entry => entry.Action == HotkeyAction.NewNote)?.Gesture.ToString(),
-            _entries.Find(entry => entry.Action == HotkeyAction.NextNote)?.Gesture.ToString(), out failure);
+        foreach (var entry in _entries)
+        {
+            if (registrar.Register(entry.Id, entry.Gesture)) _active.Add(entry.Id);
+            else failure ??= new(HotkeyFailureReason.Unavailable, entry.Gesture.ToString());
+        }
+        return failure is null;
     }
 
     public void Dispatch(int id)

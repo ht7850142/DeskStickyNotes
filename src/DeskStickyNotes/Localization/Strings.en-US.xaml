@@ -155,6 +155,19 @@
     <sys:String x:Key="HotkeyReset">Reset</sys:String>
     <sys:String x:Key="HotkeyNotSet">Not set — press a shortcut</sys:String>
     <sys:String x:Key="HotkeyInvalid">Use Ctrl, Alt, or Win together with another key.</sys:String>
-    <sys:String x:Key="HotkeyDuplicate">Choose different shortcuts for creating and switching notes.</sys:String>
+    <sys:String x:Key="TrayPinList">Pin notes by name</sys:String>
+    <sys:String x:Key="PinThisNote">Pin this note</sys:String>
+    <sys:String x:Key="UnpinThisNote">Unpin this note</sys:String>
+    <sys:String x:Key="PinAllNotes">Pin all notes</sys:String>
+    <sys:String x:Key="UnpinAllNotes">Unpin all notes</sys:String>
+    <sys:String x:Key="PinnedLabel">Pinned</sys:String>
+    <sys:String x:Key="SettingPinNoteHotkey">Pin or recall a note</sys:String>
+    <sys:String x:Key="SettingPinAllHotkey">Pin or unpin all notes</sys:String>
+    <sys:String x:Key="HotkeyPinHint">From another app, the pin shortcut opens your last note ready to type. Press it again while editing to unpin.</sys:String>
+    <sys:String x:Key="EditCut">Cut</sys:String>
+    <sys:String x:Key="EditCopy">Copy</sys:String>
+    <sys:String x:Key="EditPaste">Paste</sys:String>
+    <sys:String x:Key="EditSelectAll">Select all</sys:String>
+    <sys:String x:Key="HotkeyDuplicate">Choose a different shortcut for each action.</sys:String>
     <sys:String x:Key="HotkeyUnavailable">{0} is unavailable or used by another app. Choose another combination in Settings.</sys:String>
 </ResourceDictionary>

@@ -6,6 +6,12 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-27
+
+- Pin a note by name or pin and unpin all notes from the tray. The title bar, editor, and collapsed icon also have pin actions. Bulk changes preserve hidden, minimized, and collapsed states.
+- Press Ctrl+Alt+P from another app to pin and edit your last note. In the active note the same shortcut toggles its pin. Ctrl+Alt+Shift+P toggles all notes. Both shortcuts can be changed or disabled in Settings.
+- Pinned notes show an upright pin and a localized label. Formatting groups have separators and distinct list and checklist icons.
+
 ## [0.6.1] - 2026-11-08
 
 - Replaced system-style scrollbar rails and arrows with slim rounded grips across notes, settings, and text-slice previews. The visible grip grows from 4 to 6 DIPs on hover/drag while retaining a stable 16-DIP pointer target.

@@ -95,8 +95,12 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
         DataContext = viewModel;
         viewModel.PropertyChanged += NoteViewModel_PropertyChanged;
         UpdateNoteTitle();
+        UpdateWindowPin();
         Width = viewModel.Width;
         Height = viewModel.Height;
+        NoteHeader.ContextMenu = CreateNoteContextMenu(forEditor: false);
+        CollapsedIconContent.ContextMenu = CreateNoteContextMenu(forEditor: false);
+        Editor.ContextMenu = CreateNoteContextMenu(forEditor: true);
         Editor.AddHandler(Hyperlink.RequestNavigateEvent, new RequestNavigateEventHandler(Hyperlink_RequestNavigate));
         Editor.AddHandler(System.Windows.DragDrop.PreviewDragEnterEvent, new System.Windows.DragEventHandler(Editor_PreviewDragEnter), true);
         Editor.AddHandler(System.Windows.DragDrop.PreviewDragOverEvent, new System.Windows.DragEventHandler(Editor_PreviewDragOver), true);
@@ -116,11 +120,15 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
         {
             if (!_temporaryShortcutTopmost) return;
             _temporaryShortcutTopmost = false;
-            SetCurrentValue(TopmostProperty, _isIconCollapsed || ViewModel.Topmost);
+            UpdateWindowPin();
         };
     }
 
     private NoteViewModel ViewModel => (NoteViewModel)DataContext;
+
+    internal bool IsCollapsedToIcon => _isIconCollapsed;
+
+    private void UpdateWindowPin() => Topmost = _isIconCollapsed || _temporaryShortcutTopmost || ViewModel.Topmost;
 
     internal void FocusNoteContent()
     {
@@ -134,7 +142,7 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
         if (abovePinnedPeer && !ViewModel.Topmost)
         {
             _temporaryShortcutTopmost = true;
-            SetCurrentValue(TopmostProperty, true);
+            UpdateWindowPin();
         }
         Activate();
         FocusNoteContent();
@@ -201,6 +209,11 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
     private void NoteViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(NoteViewModel.Title)) UpdateNoteTitle();
+        if (e.PropertyName == nameof(NoteViewModel.Topmost))
+        {
+            _temporaryShortcutTopmost = false;
+            UpdateWindowPin();
+        }
     }
 
     private void UpdateNoteTitle()
@@ -212,7 +225,47 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
         CollapsedIconContent.ToolTip = $"{title}\n{LocalizationService.Get("TipRestoreNote")}";
     }
 
-    private void RenameNote_Click(object sender, RoutedEventArgs e) => RenameNote();
+    private void PinToggle_Click(object sender, RoutedEventArgs e) => FocusNoteContent();
+
+    private ContextMenu CreateNoteContextMenu(bool forEditor)
+    {
+        var menu = new ContextMenu { Padding = new Thickness(4), MinWidth = 192 };
+        menu.SetResourceReference(FontFamilyProperty, "UiFontFamily");
+        if (forEditor)
+        {
+            foreach (var (command, label) in new[] { (ApplicationCommands.Cut, "EditCut"), (ApplicationCommands.Copy, "EditCopy"),
+                (ApplicationCommands.Paste, "EditPaste"), (ApplicationCommands.SelectAll, "EditSelectAll") })
+            {
+                var edit = new MenuItem { Command = command, CommandTarget = Editor };
+                edit.SetResourceReference(HeaderedItemsControl.HeaderProperty, label);
+                menu.Items.Add(edit);
+            }
+            menu.Items.Add(new Separator());
+        }
+
+        var pin = new MenuItem();
+        var all = new MenuItem();
+        pin.Click += (_, _) => ViewModel.ToggleTopmostCommand.Execute(null);
+        all.Click += (_, _) => App.Current.SetAllNotesPinned(!App.Current.AllNotesPinned);
+        menu.Items.Add(pin);
+        menu.Items.Add(all);
+        if (!forEditor)
+        {
+            menu.Items.Add(new Separator());
+            var rename = new MenuItem { InputGestureText = "F2" };
+            rename.SetResourceReference(HeaderedItemsControl.HeaderProperty, "RenameNoteTitle");
+            rename.Click += (_, _) => RenameNote();
+            menu.Items.Add(rename);
+        }
+        menu.Opened += (_, _) =>
+        {
+            pin.Header = LocalizationService.Get(ViewModel.Topmost ? "UnpinThisNote" : "PinThisNote");
+            pin.InputGestureText = App.Current.PinNoteShortcut;
+            all.Header = LocalizationService.Get(App.Current.AllNotesPinned ? "UnpinAllNotes" : "PinAllNotes");
+            all.InputGestureText = App.Current.PinAllShortcut;
+        };
+        return menu;
+    }
 
     private void RenameNote()
     {
@@ -423,9 +476,8 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
         _expandedResizeMode = ResizeMode;
 
         // The compact reminder floats, but must not overwrite the saved pin preference.
-        SetCurrentValue(TopmostProperty, true);
-
         _isIconCollapsed = true;
+        UpdateWindowPin();
         WindowResizeHandles.IsHitTestVisible = false;
         SetCollapsedChrome(collapsed: true);
         ExpandedContent.Visibility = Visibility.Collapsed;
@@ -525,7 +577,7 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
         ApplyWindowBounds(bounds);
         _lastRestoredBounds = bounds;
         _isIconCollapsed = false;
-        SetCurrentValue(TopmostProperty, ViewModel.Topmost);
+        UpdateWindowPin();
         WindowResizeHandles.IsHitTestVisible = true;
         UpdateGeometry();
         Activate();
@@ -2737,17 +2789,15 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
             if (handle != IntPtr.Zero) NativeMethods.ShowWindowAsync(handle, SwShownoactivate);
         }
 
+        RaiseWithoutActivation(showWindow: true);
+    }
+
+    internal void RaiseWithoutActivation(bool showWindow = false)
+    {
+        var handle = new WindowInteropHelper(this).Handle;
         if (handle != IntPtr.Zero)
-        {
-            NativeMethods.SetWindowPos(
-                handle,
-                Topmost ? HwndTopmost : HwndTop,
-                0,
-                0,
-                0,
-                0,
-                SwpNoMove | SwpNoSize | SwpNoActivate | SwpShowWindow | SwpNoOwnerZOrder);
-        }
+            NativeMethods.SetWindowPos(handle, Topmost ? HwndTopmost : HwndTop, 0, 0, 0, 0,
+                SwpNoMove | SwpNoSize | SwpNoActivate | SwpNoOwnerZOrder | (showWindow ? SwpShowWindow : 0));
     }
 
     private static bool IsNativeWindowSuppressed(IntPtr handle)
@@ -2805,7 +2855,7 @@ public partial class NoteWindow : Window, IDesktopRecoverableNote
     {
         while (source is not null)
         {
-            if (source is System.Windows.Controls.Button)
+            if (source is System.Windows.Controls.Primitives.ButtonBase)
             {
                 return true;
             }

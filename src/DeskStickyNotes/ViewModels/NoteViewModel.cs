@@ -273,8 +273,6 @@ public sealed class NoteViewModel : ObservableObject
             _model.Topmost = value;
             Touch();
             OnPropertyChanged();
-            OnPropertyChanged(nameof(TopmostLabel));
-            OnPropertyChanged(nameof(TopmostGlyph));
         }
     }
 
@@ -321,10 +319,6 @@ public sealed class NoteViewModel : ObservableObject
     public string LinkForegroundHex => NoteAppearance.ResolveLinkColor(
         TextColorMode,
         NotePalette.Get(Color).Background);
-
-    public string TopmostLabel => Topmost ? "Unpin" : "Pin";
-
-    public string TopmostGlyph => Topmost ? "📌" : "📍";
 
     public DateTimeOffset UpdatedAt => _model.UpdatedAt;
 

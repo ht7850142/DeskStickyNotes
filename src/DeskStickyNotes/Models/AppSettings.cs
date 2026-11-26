@@ -2,7 +2,7 @@ namespace DeskStickyNotes.Models;
 
 public sealed class AppSettings
 {
-    public int SchemaVersion { get; set; } = 4;
+    public int SchemaVersion { get; set; } = 5;
 
     public string Language { get; set; } = "Auto";
 
@@ -21,6 +21,9 @@ public sealed class AppSettings
     public string NewNoteHotkey { get; set; } = HotkeyGesture.DefaultNewNote;
     public string NextNoteHotkey { get; set; } = HotkeyGesture.DefaultNextNote;
 
+    public string PinNoteHotkey { get; set; } = HotkeyGesture.DefaultPinNote;
+    public string PinAllHotkey { get; set; } = HotkeyGesture.DefaultPinAll;
+
     public AppSettings Clone()
     {
         return new AppSettings
@@ -34,7 +37,9 @@ public sealed class AppSettings
             KeepNotesVisibleAfterShowDesktop = KeepNotesVisibleAfterShowDesktop,
             AutoSaveIntervalSeconds = AutoSaveIntervalSeconds,
             NewNoteHotkey = NewNoteHotkey,
-            NextNoteHotkey = NextNoteHotkey
+            NextNoteHotkey = NextNoteHotkey,
+            PinNoteHotkey = PinNoteHotkey,
+            PinAllHotkey = PinAllHotkey
         };
     }
 }

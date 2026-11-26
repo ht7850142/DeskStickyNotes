@@ -20,6 +20,8 @@ public sealed class SettingsViewModel : ObservableObject
     private double _autoSaveIntervalSeconds;
     private string _newNoteHotkey;
     private string _nextNoteHotkey;
+    private string _pinNoteHotkey;
+    private string _pinAllHotkey;
     private string _validationError = "";
 
     public SettingsViewModel(
@@ -47,11 +49,22 @@ public sealed class SettingsViewModel : ObservableObject
         _newNoteHotkey = settings.NewNoteHotkey ?? HotkeyGesture.DefaultNewNote;
         _nextNoteHotkey = settings.NextNoteHotkey ?? HotkeyGesture.DefaultNextNote;
 
+        _pinNoteHotkey = settings.PinNoteHotkey ?? HotkeyGesture.DefaultPinNote;
+        _pinAllHotkey = settings.PinAllHotkey ?? HotkeyGesture.DefaultPinAll;
+
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
         ClearNewNoteHotkeyCommand = new RelayCommand(() => NewNoteHotkey = "");
         ClearNextNoteHotkeyCommand = new RelayCommand(() => NextNoteHotkey = "");
-        ResetHotkeysCommand = new RelayCommand(() => { NewNoteHotkey = HotkeyGesture.DefaultNewNote; NextNoteHotkey = HotkeyGesture.DefaultNextNote; });
+        ClearPinNoteHotkeyCommand = new RelayCommand(() => PinNoteHotkey = "");
+        ClearPinAllHotkeyCommand = new RelayCommand(() => PinAllHotkey = "");
+        ResetHotkeysCommand = new RelayCommand(() =>
+        {
+            NewNoteHotkey = HotkeyGesture.DefaultNewNote;
+            NextNoteHotkey = HotkeyGesture.DefaultNextNote;
+            PinNoteHotkey = HotkeyGesture.DefaultPinNote;
+            PinAllHotkey = HotkeyGesture.DefaultPinAll;
+        });
     }
 
     public event EventHandler? CloseRequested;
@@ -121,6 +134,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand ClearNewNoteHotkeyCommand { get; }
     public ICommand ClearNextNoteHotkeyCommand { get; }
+    public ICommand ClearPinNoteHotkeyCommand { get; }
+    public ICommand ClearPinAllHotkeyCommand { get; }
     public ICommand ResetHotkeysCommand { get; }
 
     public string NewNoteHotkey
@@ -132,6 +147,16 @@ public sealed class SettingsViewModel : ObservableObject
     {
         get => _nextNoteHotkey;
         set { if (SetProperty(ref _nextNoteHotkey, value)) SetHotkeyError(""); }
+    }
+    public string PinNoteHotkey
+    {
+        get => _pinNoteHotkey;
+        set { if (SetProperty(ref _pinNoteHotkey, value)) SetHotkeyError(""); }
+    }
+    public string PinAllHotkey
+    {
+        get => _pinAllHotkey;
+        set { if (SetProperty(ref _pinAllHotkey, value)) SetHotkeyError(""); }
     }
     public string ValidationError => _validationError;
     public bool HasValidationError => !string.IsNullOrEmpty(_validationError);
@@ -153,7 +178,9 @@ public sealed class SettingsViewModel : ObservableObject
             KeepNotesVisibleAfterShowDesktop = KeepNotesVisibleAfterShowDesktop,
             AutoSaveIntervalSeconds = (int)Math.Round(AutoSaveIntervalSeconds),
             NewNoteHotkey = NewNoteHotkey,
-            NextNoteHotkey = NextNoteHotkey
+            NextNoteHotkey = NextNoteHotkey,
+            PinNoteHotkey = PinNoteHotkey,
+            PinAllHotkey = PinAllHotkey
         };
         if (_validateHotkeys?.Invoke(settings) is { } error)
         {

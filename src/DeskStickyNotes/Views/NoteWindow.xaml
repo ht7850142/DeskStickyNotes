@@ -16,10 +16,26 @@
         ShowActivated="False"
         UseLayoutRounding="True"
         ShowInTaskbar="False"
-        Topmost="{Binding Topmost, Mode=OneWay}"
         Background="Transparent"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
+        <Style x:Key="ToolGroupDivider" TargetType="Border">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Margin" Value="2,0,1,0" />
+            <Setter Property="Background" Value="#32454C45" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+        <Style x:Key="ListToolGlyph" TargetType="Path">
+            <Setter Property="Width" Value="15" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+            <Setter Property="StrokeThickness" Value="1.5" />
+            <Setter Property="StrokeStartLineCap" Value="Round" />
+            <Setter Property="StrokeEndLineCap" Value="Round" />
+            <Setter Property="StrokeLineJoin" Value="Round" />
+        </Style>
         <Style x:Key="WindowResizeThumbStyle" TargetType="Thumb">
             <Setter Property="Focusable" Value="False" />
             <Setter Property="ToolTip" Value="{DynamicResource TipResizeNote}" />
@@ -60,11 +76,6 @@
                     MouseLeftButtonDown="CollapsedIcon_MouseLeftButtonDown"
                     MouseMove="CollapsedIcon_MouseMove"
                     MouseLeftButtonUp="CollapsedIcon_MouseLeftButtonUp">
-                <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{DynamicResource RenameNoteTitle}" InputGestureText="F2" Click="RenameNote_Click" />
-                    </ContextMenu>
-                </Border.ContextMenu>
                 <Image Width="44"
                        Height="44"
                        HorizontalAlignment="Center"
@@ -80,17 +91,12 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0"
+            <Border x:Name="NoteHeader" Grid.Row="0"
                     Background="{Binding HeaderHex}"
                     CornerRadius="8,8,0,0"
                     MouseLeftButtonDown="DragBar_MouseLeftButtonDown"
                     MouseMove="DragBar_MouseMove"
                     MouseLeftButtonUp="DragBar_MouseLeftButtonUp">
-                <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{DynamicResource RenameNoteTitle}" InputGestureText="F2" Click="RenameNote_Click" />
-                    </ContextMenu>
-                </Border.ContextMenu>
                 <DockPanel Margin="10,7,8,7" LastChildFill="True">
                     <StackPanel DockPanel.Dock="Right"
                                 Orientation="Horizontal"
@@ -98,28 +104,16 @@
                         <Button ToolTip="{DynamicResource TipChangeColor}"
                                 Style="{StaticResource IconButtonStyle}"
                                 Click="ColorButton_Click">
-                            <Border Width="18"
-                                    Height="18"
+                            <Border Width="15"
+                                    Height="15"
                                     CornerRadius="9"
                                     Background="{Binding SwatchHex}"
                                     BorderBrush="{Binding BorderHex}"
-                                    BorderThickness="1.5">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="3"
-                                                      ShadowDepth="0"
-                                                      Opacity="0.16"
-                                                      Color="#111827" />
-                                </Border.Effect>
-                            </Border>
+                                    BorderThickness="1.5" />
                         </Button>
-                        <Button Style="{StaticResource TopmostButtonStyle}"
-                                Command="{Binding ToggleTopmostCommand}">
-                            <Path Width="15"
-                                  Height="15"
-                                  Stretch="Uniform"
-                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Data="M16,2H8V4H9V11.2L7,13.2V15H11.2V22H12.8V15H17V13.2L15,11.2V4H16V2Z" />
-                        </Button>
+                        <ToggleButton x:Name="PinToggle" Style="{StaticResource TopmostButtonStyle}"
+                                      IsChecked="{Binding Topmost, Mode=TwoWay}"
+                                      Click="PinToggle_Click" />
                         <Button ToolTip="{DynamicResource TipCollapseNote}"
                                 Style="{StaticResource IconButtonStyle}"
                                 Click="CollapseButton_Click">
@@ -155,7 +149,7 @@
                                    TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center"
                                    Foreground="{StaticResource NoteControlBrush}"
-                                   FontSize="13"
+                                   FontSize="14"
                                    FontWeight="SemiBold" />
                     </DockPanel>
                 </DockPanel>
@@ -170,7 +164,7 @@
                                 Orientation="Horizontal"
                                 VerticalAlignment="Center"
                                 KeyboardNavigation.TabNavigation="Continue">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
+                        <StackPanel Orientation="Horizontal">
                             <Button Content="B"
                                     ToolTip="{DynamicResource TipBold}"
                                     Style="{StaticResource EditorToolButtonStyle}"
@@ -194,25 +188,33 @@
                                     Tag="Strike">
                                 <TextBlock Text="S" TextDecorations="Strikethrough" />
                             </Button>
+                            <Border Style="{StaticResource ToolGroupDivider}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
-                            <Button Content="•"
+                        <StackPanel Orientation="Horizontal">
+                            <Button
                                     ToolTip="{DynamicResource TipBulletList}"
                                     Style="{StaticResource EditorToolButtonStyle}"
                                     Click="EditorToolButton_Click"
-                                    Tag="Bullet" />
-                            <Button Content="1."
+                                    Tag="Bullet">
+                                <Path Style="{StaticResource ListToolGlyph}" Data="M2,4 H3 M6,4 H16 M2,8 H3 M6,8 H16 M2,12 H3 M6,12 H16" />
+                            </Button>
+                            <Button
                                     ToolTip="{DynamicResource TipNumberList}"
                                     Style="{StaticResource EditorToolButtonStyle}"
                                     Click="EditorToolButton_Click"
-                                    Tag="Number" />
-                            <Button Content="☐"
+                                    Tag="Number">
+                                <Path Style="{StaticResource ListToolGlyph}" Data="M1,3 L3,2 V6 M1,6 H4 M1,10 Q4,8 4,11 L1,14 H4 M7,4 H16 M7,11 H16" />
+                            </Button>
+                            <Button
                                     ToolTip="{DynamicResource TipTodo}"
                                     Style="{StaticResource EditorToolButtonStyle}"
                                     Click="EditorToolButton_Click"
-                                    Tag="Todo" />
+                                    Tag="Todo">
+                                <Path Style="{StaticResource ListToolGlyph}" Data="M2,8 L5,11 L11,4 M13,6 H16 V15 H2 V12" />
+                            </Button>
+                            <Border Style="{StaticResource ToolGroupDivider}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,4,0">
+                        <StackPanel Orientation="Horizontal">
                             <Button ToolTip="{DynamicResource TipHyperlink}"
                                     Style="{StaticResource EditorToolButtonStyle}"
                                     Click="HyperlinkButton_Click">
@@ -238,6 +240,7 @@
                                     Style="{StaticResource EditorToolButtonStyle}"
                                     Click="HeadingButton_Click"
                                     FontWeight="Bold" />
+                            <Border Style="{StaticResource ToolGroupDivider}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0">
                             <Button ToolTip="{DynamicResource TipAlignLeft}"
@@ -280,7 +283,7 @@
                              FontSize="{Binding FontSize}"
                              FontFamily="{DynamicResource UiFontFamily}"
                              Foreground="{Binding TextForegroundHex}"
-                             CaretBrush="#2563EB"
+                             CaretBrush="{Binding TextForegroundHex}"
                              SelectionBrush="#93C5FD"
                              Background="Transparent"
                              BorderThickness="0"
