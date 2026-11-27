@@ -1,0 +1,29 @@
+name: Attach verified 0.7.1 downloads
+on:
+  push:
+    branches: [qa/winget-deskstickynotes-0.7.1]
+    paths: [.github/workflows/attach-release-assets.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ht7850142/DeskStickyNotes
+    steps:
+      - name: Attach the checked build to the 0.7.1 draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view v0.7.1 --json isDraft --jq .isDraft)" = true
+          test "$(gh api repos/ht7850142/DeskStickyNotes/git/ref/tags/v0.7.1 --jq .object.sha)" = a60a5d9ce3ba8d22e7998037319217b1e2fb60f8
+          test "$(gh run view 45918488864 --json conclusion --jq .conclusion)" = success
+          gh run download 45918488864 -n DeskStickyNotes-0.7.1-downloads -D packages
+          cd packages
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 5
+          sha256sum --check DeskStickyNotes-0.7.1-SHA256SUMS.txt
+          gh release upload v0.7.1 DeskStickyNotes*0.7.1*
+          gh release view v0.7.1 --json assets --jq '.assets[] | [.name,.size,.digest] | @tsv'
