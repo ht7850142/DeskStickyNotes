@@ -659,6 +659,13 @@ internal static class Program
                     root.Measure(new Size(500, 420));
                     root.Arrange(new Rect(0, 0, 500, 420));
                     root.UpdateLayout();
+                    var repository = (Hyperlink)settingsWindow.FindName("RepositoryLink");
+                    Equal("https://github.com/ht7850142/DeskStickyNotes", repository.NavigateUri.AbsoluteUri);
+                    Equal(repository.NavigateUri.AbsoluteUri, new TextRange(repository.ContentStart, repository.ContentEnd).Text);
+                    var address = (TextBlock)repository.Parent;
+                    var linkBounds = address.TransformToAncestor(root).TransformBounds(new Rect(new Point(), address.RenderSize));
+                    Assert(repository.Focusable && linkBounds.Width > 0 && linkBounds.Height > 0 &&
+                        new Rect(0, 0, 500, 420).Contains(linkBounds), $"About link is not reachable in {option.Code}.");
                     var actions = Descendants<Button>(root).Where(button => button.Command == settings.SaveCommand || button.Command == settings.CancelCommand).ToList();
                     Equal(2, actions.Count);
                     foreach (var button in actions)

@@ -6,6 +6,10 @@ The project follows practical semantic versioning while it is pre-1.0. Breaking 
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-27
+
+- Open the project's GitHub repository from **Settings → About**. The address stays visible beside the app version as you scroll through settings.
+
 ## [0.7.0] - 2026-11-27
 
 - Pin a note by name or pin and unpin all notes from the tray. The title bar, editor, and collapsed icon also have pin actions. Bulk changes preserve hidden, minimized, and collapsed states.

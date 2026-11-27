@@ -131,6 +131,7 @@
     <sys:String x:Key="SettingsDefaultsHint">Color and pinning apply to new notes. Font size applies to all notes.</sys:String>
     <sys:String x:Key="SettingsDesktopTitle">Desktop &amp; startup</sys:String>
     <sys:String x:Key="SettingsSaveTitle">Saving</sys:String>
+    <sys:String x:Key="SettingsAboutTitle">About</sys:String>
     <sys:String x:Key="SettingsPreviewTitle">Preview</sys:String>
     <sys:String x:Key="SettingsPreviewText">Keep a thought close. Focus on one thing at a time.</sys:String>
     <sys:String x:Key="SettingsTopmostHint">Keep new notes above other app windows.</sys:String>

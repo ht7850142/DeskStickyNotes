@@ -1,5 +1,8 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Navigation;
 using TextBox = System.Windows.Controls.TextBox;
 using DeskStickyNotes.Models;
 using DeskStickyNotes.Services;
@@ -39,6 +42,19 @@ public partial class SettingsWindow : Window
     private void OnCloseRequested(object? sender, EventArgs e)
     {
         Close();
+    }
+
+    private void RepositoryLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        e.Handled = true;
+        try
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Win32Exception error)
+        {
+            System.Windows.MessageBox.Show(this, error.Message, e.Uri.AbsoluteUri, MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private void SetCapture(bool capturing)

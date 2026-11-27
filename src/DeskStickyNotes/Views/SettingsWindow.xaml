@@ -244,6 +244,7 @@
                         Style="{StaticResource SettingsSliderStyle}" Margin="0,3,0,4"
                         AutomationProperties.Name="{DynamicResource SettingAutoSave}" />
                 <TextBlock Text="{DynamicResource SettingsStorageHint}" Style="{StaticResource SettingsHint}" />
+                <TextBlock Text="{DynamicResource SettingsLocalLabel}" Style="{StaticResource SettingsHint}" />
             </StackPanel>
         </ScrollViewer>
         <Border Grid.Row="2" BorderBrush="{StaticResource SettingsDividerBrush}" BorderThickness="0,1,0,0"
@@ -265,9 +266,18 @@
                         <Button Content="{DynamicResource SettingsSaveButton}" Style="{StaticResource PrimaryButtonStyle}"
                                 Command="{Binding SaveCommand}" IsDefault="True" />
                     </StackPanel>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{DynamicResource SettingsLocalLabel}" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource SettingsMutedBrush}" />
-                        <TextBlock Text="{Binding AppVersion, StringFormat={}v{0}}" FontSize="11" Foreground="{StaticResource SettingsMutedBrush}" Margin="0,2,0,0" />
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                        <WrapPanel>
+                            <TextBlock Text="{DynamicResource SettingsAboutTitle}" Style="{StaticResource SettingsLabel}"
+                                       FontWeight="SemiBold" Margin="0,0,8,0" />
+                            <TextBlock Text="{Binding AppVersion, StringFormat={}v{0}}" Style="{StaticResource SettingsHint}" VerticalAlignment="Center" />
+                        </WrapPanel>
+                        <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,3,0,0">
+                            <Hyperlink x:Name="RepositoryLink" NavigateUri="https://github.com/ht7850142/DeskStickyNotes"
+                                       Foreground="{StaticResource NotePinnedBrush}" RequestNavigate="RepositoryLink_RequestNavigate">
+                                <Run Text="{Binding NavigateUri.AbsoluteUri, ElementName=RepositoryLink, Mode=OneWay}" />
+                            </Hyperlink>
+                        </TextBlock>
                     </StackPanel>
                 </DockPanel>
             </StackPanel>

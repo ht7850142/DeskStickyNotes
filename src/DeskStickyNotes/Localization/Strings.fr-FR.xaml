@@ -125,6 +125,7 @@
     <sys:String x:Key="SettingsDefaultsHint">La couleur et l’épinglage concernent les nouvelles notes. La taille du texte s’applique à toutes.</sys:String>
     <sys:String x:Key="SettingsDesktopTitle">Bureau et démarrage</sys:String>
     <sys:String x:Key="SettingsSaveTitle">Enregistrement</sys:String>
+    <sys:String x:Key="SettingsAboutTitle">À propos</sys:String>
     <sys:String x:Key="SettingsPreviewTitle">Aperçu</sys:String>
     <sys:String x:Key="SettingsPreviewText">Gardez une idée à portée de main. Concentrez-vous sur une chose à la fois.</sys:String>
     <sys:String x:Key="SettingsTopmostHint">Garder les nouvelles notes au-dessus des autres applications.</sys:String>

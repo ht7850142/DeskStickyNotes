@@ -131,6 +131,7 @@
     <sys:String x:Key="SettingsDefaultsHint">颜色与置顶用于新便签；字号应用到所有便签。</sys:String>
     <sys:String x:Key="SettingsDesktopTitle">桌面与启动</sys:String>
     <sys:String x:Key="SettingsSaveTitle">保存</sys:String>
+    <sys:String x:Key="SettingsAboutTitle">关于</sys:String>
     <sys:String x:Key="SettingsPreviewTitle">外观预览</sys:String>
     <sys:String x:Key="SettingsPreviewText">把想法留在手边，专注眼前的一件事。</sys:String>
     <sys:String x:Key="SettingsTopmostHint">让新便签保持在其他应用窗口上方。</sys:String>

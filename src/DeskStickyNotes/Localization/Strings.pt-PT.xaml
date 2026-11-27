@@ -125,6 +125,7 @@
     <sys:String x:Key="SettingsDefaultsHint">A cor e a afixação aplicam-se às novas notas. O tamanho do texto aplica-se a todas.</sys:String>
     <sys:String x:Key="SettingsDesktopTitle">Ambiente de trabalho e arranque</sys:String>
     <sys:String x:Key="SettingsSaveTitle">Gravação</sys:String>
+    <sys:String x:Key="SettingsAboutTitle">Sobre</sys:String>
     <sys:String x:Key="SettingsPreviewTitle">Pré-visualização</sys:String>
     <sys:String x:Key="SettingsPreviewText">Tenha as ideias sempre à mão. Concentre-se numa coisa de cada vez.</sys:String>
     <sys:String x:Key="SettingsTopmostHint">Manter as novas notas sobre as outras aplicações.</sys:String>

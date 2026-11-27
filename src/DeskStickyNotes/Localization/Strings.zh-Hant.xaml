@@ -125,6 +125,7 @@
     <sys:String x:Key="SettingsDefaultsHint">顏色與置頂套用至新便箋；文字大小會套用至所有便箋。</sys:String>
     <sys:String x:Key="SettingsDesktopTitle">桌面與啟動</sys:String>
     <sys:String x:Key="SettingsSaveTitle">儲存</sys:String>
+    <sys:String x:Key="SettingsAboutTitle">關於</sys:String>
     <sys:String x:Key="SettingsPreviewTitle">外觀預覽</sys:String>
     <sys:String x:Key="SettingsPreviewText">把想法留在手邊，專注眼前的一件事。</sys:String>
     <sys:String x:Key="SettingsTopmostHint">讓新便箋保持在其他應用程式視窗上方。</sys:String>

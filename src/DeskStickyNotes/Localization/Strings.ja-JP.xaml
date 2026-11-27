@@ -125,6 +125,7 @@
     <sys:String x:Key="SettingsDefaultsHint">色と固定は新しい付箋に適用されます。文字サイズはすべての付箋に適用されます。</sys:String>
     <sys:String x:Key="SettingsDesktopTitle">デスクトップと起動</sys:String>
     <sys:String x:Key="SettingsSaveTitle">保存</sys:String>
+    <sys:String x:Key="SettingsAboutTitle">このアプリについて</sys:String>
     <sys:String x:Key="SettingsPreviewTitle">プレビュー</sys:String>
     <sys:String x:Key="SettingsPreviewText">アイデアを手元に。一つずつ、目の前のことに集中。</sys:String>
     <sys:String x:Key="SettingsTopmostHint">新しい付箋をほかのアプリより前面に表示します。</sys:String>
