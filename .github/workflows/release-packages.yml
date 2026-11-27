@@ -1,0 +1,38 @@
+name: Build DeskStickyNotes 0.7.1 downloads
+on:
+  push:
+    branches: [qa/winget-deskstickynotes-0.7.1]
+    paths: [.github/workflows/release-packages.yml]
+permissions:
+  contents: read
+jobs:
+  packages:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: a60a5d9ce3ba8d22e7998037319217b1e2fb60f8
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build all Windows packages from the release commit
+        shell: pwsh
+        run: |
+          if (!(Test-Path "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe") -and !(Get-Command iscc.exe -ErrorAction SilentlyContinue)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed.' }
+          }
+          ./scripts/package.ps1 -AllInstallers
+          $exe = Get-Item ./artifacts/publish/0.7.1/win-x64-portable-runtime/DeskStickyNotes.exe
+          if ($exe.VersionInfo.ProductVersion -ne '0.7.1+a60a5d9ce3ba8d22e7998037319217b1e2fb60f8') {
+            throw "Unexpected source version $($exe.VersionInfo.ProductVersion)"
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DeskStickyNotes-0.7.1-downloads
+          path: artifacts/installer/*0.7.1*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 5
